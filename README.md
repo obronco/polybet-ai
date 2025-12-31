@@ -123,7 +123,7 @@ risk_limits:
 
 position_sizing:
   method: kelly_criterion
-  kelly_fraction: 0.25  # Quarter Kelly for safety
+  kelly_fraction: 0.5  # Half Kelly for optimal growth with reduced variance
 ```
 
 ## Usage

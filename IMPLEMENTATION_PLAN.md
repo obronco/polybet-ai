@@ -460,7 +460,7 @@ risk_limits:
   min_confidence: 6  # out of 10
   max_concurrent_positions: 10
 
-kelly_fraction: 0.25  # Quarter Kelly for conservative sizing
+kelly_fraction: 0.5  # Half Kelly for optimal growth with reduced variance
 
 circuit_breakers:
   daily_loss_threshold: 0.15  # Pause at 15% daily loss

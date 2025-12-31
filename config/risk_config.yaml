@@ -3,7 +3,7 @@
 # Position Sizing
 position_sizing:
   method: kelly_criterion  # Options: kelly_criterion, fixed_fraction, fixed_amount
-  kelly_fraction: 0.25  # Use quarter Kelly for conservative sizing
+  kelly_fraction: 0.5  # Use half Kelly for optimal growth with reduced variance
   max_bet_size_pct: 0.03  # Maximum 3% of bankroll per trade
   min_bet_size_usd: 10  # Minimum bet size
   max_bet_size_usd: 1000  # Absolute maximum per trade
