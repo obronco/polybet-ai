@@ -79,10 +79,11 @@ class NewsArticle(BaseModel):
     @property
     def age_hours(self) -> float:
         """Calculate article age in hours."""
-        delta = datetime.now() - self.published_at
+        # Make datetime.now() timezone-aware to match published_at
+        now = datetime.now(self.published_at.tzinfo) if self.published_at.tzinfo else datetime.now()
+        delta = now - self.published_at
         return delta.total_seconds() / 3600
 
-    @property
     def is_recent(self, hours: int = 24) -> bool:
         """Check if article is recent (default: within 24 hours)."""
         return self.age_hours <= hours

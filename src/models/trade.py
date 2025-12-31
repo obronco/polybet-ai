@@ -66,7 +66,6 @@ class Prediction(BaseModel):
     model_name: str = Field(..., description="LLM model used")
     temperature: float = Field(default=0.7, description="Model temperature")
 
-    @property
     def has_edge(self, min_edge: float = 0.05) -> bool:
         """Check if prediction has sufficient edge."""
         return float(self.edge) >= min_edge

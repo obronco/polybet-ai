@@ -3,11 +3,12 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import pytest_asyncio
 
 from src.agents.market_intel import MarketIntelligenceAgent
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def market_intel(mock_gamma_client):
     """Create market intelligence agent with mocked Gamma client."""
     with patch("src.agents.market_intel.GammaClient") as mock_gamma:
