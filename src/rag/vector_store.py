@@ -1,7 +1,7 @@
-"""Vector store for RAG (Retrieval-Augmented Generation)."""
+"""Vector store for RAG (Retrieval-Augmented Generation) with hybrid search."""
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import chromadb
 from chromadb.config import Settings
@@ -11,6 +11,7 @@ from ..models.market import Market
 from ..models.news import NewsArticle
 from ..utils.config import config
 from ..utils.logger import get_logger
+from .bm25 import bm25_index
 
 logger = get_logger(__name__)
 
@@ -106,6 +107,9 @@ class VectorStore:
                 metadatas=metadatas,
             )
 
+            # Also index in BM25 for keyword search
+            bm25_index.index_news_articles(articles)
+
             logger.info("news_articles_added", count=len(articles))
             return len(articles)
 
@@ -156,6 +160,9 @@ class VectorStore:
                 documents=documents,
                 metadatas=metadatas,
             )
+
+            # Also index in BM25 for keyword search
+            bm25_index.index_markets(markets)
 
             logger.info("markets_added", count=len(markets))
             return len(markets)
@@ -416,6 +423,228 @@ class VectorStore:
         except Exception as e:
             logger.error("clear_collection_error", error=str(e))
             return False
+
+    def hybrid_search_markets(
+        self,
+        query: str,
+        top_k: int = 10,
+        bm25_weight: float = 0.3,
+        vector_weight: float = 0.7,
+        filters: Optional[Dict] = None,
+    ) -> List[Dict]:
+        """Hybrid search combining BM25 and vector similarity for markets.
+
+        Args:
+            query: Search query
+            top_k: Number of results to return
+            bm25_weight: Weight for BM25 scores (default: 0.3)
+            vector_weight: Weight for vector similarity (default: 0.7)
+            filters: Optional metadata filters
+
+        Returns:
+            List of ranked market results
+        """
+        # Get BM25 results
+        bm25_results = bm25_index.search_markets(query, top_k=top_k * 2)
+
+        # Get vector similarity results
+        vector_results = self.search_similar_markets(
+            query, top_k=top_k * 2, filters=filters
+        )
+
+        # Combine and rerank
+        combined_scores = {}
+
+        # Normalize and combine BM25 scores
+        if bm25_results:
+            max_bm25 = max(r["score"] for r in bm25_results) if bm25_results else 1
+            for result in bm25_results:
+                doc_id = result["id"]
+                normalized_score = result["score"] / max_bm25 if max_bm25 > 0 else 0
+                combined_scores[doc_id] = normalized_score * bm25_weight
+
+        # Add vector similarity scores
+        for result in vector_results:
+            doc_id = result["id"]
+            # relevance_score is already 0-1
+            vector_score = result.get("relevance_score", 1 - result["distance"])
+            if doc_id in combined_scores:
+                combined_scores[doc_id] += vector_score * vector_weight
+            else:
+                combined_scores[doc_id] = vector_score * vector_weight
+
+        # Sort by combined score
+        ranked = sorted(
+            combined_scores.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:top_k]
+
+        # Get full metadata for top results
+        results = []
+        for doc_id, score in ranked:
+            # Find result in either list to get metadata
+            metadata = None
+            for vr in vector_results:
+                if vr["id"] == doc_id:
+                    metadata = vr.get("metadata", {})
+                    break
+
+            results.append({
+                "id": doc_id,
+                "score": score,
+                "hybrid_score": score,
+                "metadata": metadata or {},
+                "type": "market",
+            })
+
+        logger.debug(
+            "hybrid_search_markets",
+            query=query,
+            bm25_results=len(bm25_results),
+            vector_results=len(vector_results),
+            final_results=len(results),
+        )
+
+        return results
+
+    def hybrid_search_news(
+        self,
+        query: str,
+        top_k: int = 10,
+        bm25_weight: float = 0.3,
+        vector_weight: float = 0.7,
+        filters: Optional[Dict] = None,
+    ) -> List[Dict]:
+        """Hybrid search combining BM25 and vector similarity for news.
+
+        Args:
+            query: Search query (e.g., market question)
+            top_k: Number of results
+            bm25_weight: Weight for BM25 scores (default: 0.3)
+            vector_weight: Weight for vector similarity (default: 0.7)
+            filters: Optional metadata filters
+
+        Returns:
+            List of ranked news results
+        """
+        # Get BM25 results
+        bm25_results = bm25_index.search_news(query, top_k=top_k * 2)
+
+        # Get vector similarity results
+        vector_results = self.search_relevant_news(
+            query, top_k=top_k * 2, filters=filters
+        )
+
+        # Combine and rerank
+        combined_scores = {}
+
+        # Normalize and combine BM25 scores
+        if bm25_results:
+            max_bm25 = max(r["score"] for r in bm25_results) if bm25_results else 1
+            for result in bm25_results:
+                doc_id = result["id"]
+                normalized_score = result["score"] / max_bm25 if max_bm25 > 0 else 0
+                combined_scores[doc_id] = normalized_score * bm25_weight
+
+        # Add vector similarity scores
+        for result in vector_results:
+            doc_id = result["id"]
+            vector_score = result.get("relevance_score", 1 - result["distance"])
+            if doc_id in combined_scores:
+                combined_scores[doc_id] += vector_score * vector_weight
+            else:
+                combined_scores[doc_id] = vector_score * vector_weight
+
+        # Sort by combined score
+        ranked = sorted(
+            combined_scores.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:top_k]
+
+        # Get full metadata for top results
+        results = []
+        for doc_id, score in ranked:
+            # Find result in either list to get metadata
+            metadata = None
+            for vr in vector_results:
+                if vr["id"] == doc_id:
+                    metadata = vr.get("metadata", {})
+                    break
+
+            results.append({
+                "id": doc_id,
+                "score": score,
+                "hybrid_score": score,
+                "relevance_score": score,  # For compatibility
+                "metadata": metadata or {},
+                "type": "news",
+            })
+
+        logger.debug(
+            "hybrid_search_news",
+            query=query,
+            bm25_results=len(bm25_results),
+            vector_results=len(vector_results),
+            final_results=len(results),
+        )
+
+        return results
+
+    def hybrid_find_news_for_market(
+        self,
+        market: Market,
+        top_k: int = 10,
+        bm25_weight: float = 0.3,
+        vector_weight: float = 0.7,
+    ) -> List[Dict]:
+        """Find news articles for a market using hybrid search.
+
+        Args:
+            market: Market object
+            top_k: Number of news articles to return
+            bm25_weight: Weight for BM25 (default: 0.3)
+            vector_weight: Weight for vectors (default: 0.7)
+
+        Returns:
+            List of relevant news articles with hybrid scores
+        """
+        query = f"{market.question} {market.description or ''}"
+
+        return self.hybrid_search_news(
+            query=query,
+            top_k=top_k,
+            bm25_weight=bm25_weight,
+            vector_weight=vector_weight,
+        )
+
+    def hybrid_find_markets_for_news(
+        self,
+        article: NewsArticle,
+        top_k: int = 5,
+        bm25_weight: float = 0.3,
+        vector_weight: float = 0.7,
+    ) -> List[Dict]:
+        """Find markets for a news article using hybrid search.
+
+        Args:
+            article: NewsArticle object
+            top_k: Number of markets to return
+            bm25_weight: Weight for BM25 (default: 0.3)
+            vector_weight: Weight for vectors (default: 0.7)
+
+        Returns:
+            List of relevant markets with hybrid scores
+        """
+        query = f"{article.title} {article.description or ''}"
+
+        return self.hybrid_search_markets(
+            query=query,
+            top_k=top_k,
+            bm25_weight=bm25_weight,
+            vector_weight=vector_weight,
+        )
 
 
 # Global vector store instance

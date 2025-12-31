@@ -100,23 +100,31 @@ class AnalystAgent:
         all_opportunities = []
 
         for article in news_articles:
-            # Use RAG to find related markets
-            related_markets = vector_store.find_markets_for_news(
+            # Use hybrid search (BM25 + vector embeddings) to find related markets
+            related_markets = vector_store.hybrid_find_markets_for_news(
                 article,
                 top_k=10,
-                min_relevance=min_relevance,
+                bm25_weight=0.4,  # Higher weight for keyword matching in news
+                vector_weight=0.6,
             )
+
+            # Filter by minimum relevance
+            related_markets = [
+                m for m in related_markets
+                if m.get("hybrid_score", 0) >= min_relevance
+            ]
 
             for market_data in related_markets:
                 # Create opportunity
                 opportunity = MarketOpportunity(
                     market=Market(**market_data["metadata"]),
-                    relevance_score=market_data["relevance_score"],
+                    relevance_score=market_data.get("hybrid_score", market_data.get("relevance_score", 0.5)),
                     news_context=[article.id],
                     metadata={
                         "news_title": article.title,
                         "news_source": article.source.value,
                         "published_at": article.published_at.isoformat(),
+                        "search_method": "hybrid_bm25_vector",
                     },
                 )
                 all_opportunities.append(opportunity)
@@ -154,12 +162,19 @@ class AnalystAgent:
         results = []
 
         for market in markets:
-            # Use RAG to find relevant news
-            relevant_news_data = vector_store.find_news_for_market(
+            # Use hybrid search (BM25 + vector) to find relevant news
+            relevant_news_data = vector_store.hybrid_find_news_for_market(
                 market,
                 top_k=10,
-                min_relevance=min_relevance,
+                bm25_weight=0.3,  # Standard weights for market->news search
+                vector_weight=0.7,
             )
+
+            # Filter by minimum relevance
+            relevant_news_data = [
+                n for n in relevant_news_data
+                if n.get("hybrid_score", 0) >= min_relevance
+            ]
 
             # Reconstruct NewsArticle objects from metadata
             news_articles = []

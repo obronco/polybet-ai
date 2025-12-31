@@ -14,6 +14,7 @@ An intelligent, multi-agent system for autonomous trading on Polymarket predicti
 
 ### 🧠 AI-Powered Decision Making
 - LLM-based market outcome predictions with confidence scoring
+- **Hybrid Search**: BM25 + Vector embeddings for optimal retrieval
 - Semantic search using ChromaDB vector store for news-market correlation
 - RAG (Retrieval-Augmented Generation) for context-aware forecasting
 - Bayesian reasoning and base rate analysis
@@ -254,6 +255,44 @@ polybet-ai/
 ├── .env.example
 └── README.md
 ```
+
+## Advanced Features
+
+### Hybrid Search: BM25 + Vector Embeddings
+
+The system uses **hybrid retrieval** combining two complementary search methods:
+
+**BM25 (Best Matching 25)**
+- Probabilistic keyword-based ranking function
+- Excels at exact keyword matches and specific terms
+- Fast and efficient for precision retrieval
+- Parameters: k1=1.5 (term frequency saturation), b=0.75 (length normalization)
+
+**Vector Embeddings (OpenAI)**
+- Dense semantic representations using `text-embedding-3-small`
+- Captures meaning and context beyond keywords
+- Finds semantically similar content even with different wording
+- Stored in ChromaDB with cosine similarity
+
+**Hybrid Combination**
+```python
+hybrid_score = (bm25_score * 0.3) + (vector_score * 0.7)
+```
+
+**Why Hybrid?**
+- **BM25** catches specific terminology (e.g., "BTC" vs "Bitcoin")
+- **Vectors** understand synonyms and context (e.g., "price surge" = "value increases")
+- **Together** they provide robust, high-quality retrieval
+
+**Tunable Weights:**
+- News → Markets: 40% BM25, 60% Vector (higher keyword weight for news matching)
+- Markets → News: 30% BM25, 70% Vector (standard balance)
+- Configurable per query for optimization
+
+**Performance Benefits:**
+- Better precision and recall than either method alone
+- Reduces false positives from pure semantic search
+- Captures both exact and fuzzy matches
 
 ## Safety Features
 
