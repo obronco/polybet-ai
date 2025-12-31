@@ -1,10 +1,10 @@
 """Risk Management Agent - Validates trades and enforces risk limits."""
 
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import List
 
 from ..models.market import Market
-from ..models.trade import Portfolio, Prediction, ProposedTrade, RiskAssessment, TradeDirection
+from ..models.trade import Portfolio, Prediction, RiskAssessment, TradeDirection
 from ..utils.config import config
 from ..utils.logger import get_logger
 

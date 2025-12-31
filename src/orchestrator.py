@@ -2,7 +2,7 @@
 
 import asyncio
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from .agents.analyst import AnalystAgent
 from .agents.forecaster import ForecastingAgent
@@ -10,9 +10,6 @@ from .agents.market_intel import MarketIntelligenceAgent
 from .agents.news_scraper import NewsScraperAgent
 from .agents.risk_manager import RiskManagerAgent
 from .agents.trader import TradingAgent
-from .models.market import Market
-from .models.news import NewsArticle
-from .models.trade import Portfolio
 from .utils.config import config
 from .utils.logger import get_logger
 
@@ -340,10 +337,6 @@ class AutonomousOrchestrator:
             return {"error": "Market not found"}
 
         # Find relevant news
-        from .rag.vector_store import vector_store
-
-        news_data = vector_store.find_news_for_market(market, top_k=5)
-
         # Generate prediction
         prediction = await self.forecaster.predict_outcome(market)
 

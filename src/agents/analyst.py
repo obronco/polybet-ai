@@ -7,7 +7,6 @@ from ..models.news import NewsArticle
 from ..rag.vector_store import vector_store
 from ..utils.llm import llm_client
 from ..utils.logger import get_logger
-from ..utils.prompts import build_news_context
 
 logger = get_logger(__name__)
 

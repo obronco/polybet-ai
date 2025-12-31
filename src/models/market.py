@@ -3,7 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -155,7 +155,7 @@ class MarketOpportunity(BaseModel):
     identified_at: datetime = Field(
         default_factory=datetime.now, description="When opportunity was identified"
     )
-    metadata: Dict[str, any] = Field(
+    metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 

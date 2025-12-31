@@ -187,7 +187,7 @@ class TavilySource:
         if "published_date" in data:
             try:
                 published_at = datetime.fromisoformat(data["published_date"])
-            except:
+            except Exception:
                 pass
 
         return NewsArticle(

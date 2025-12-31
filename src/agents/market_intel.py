@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import List, Optional
 
 from ..api.gamma import GammaClient
-from ..models.market import Market, MarketOpportunity, MarketStatus
+from ..models.market import Market, MarketOpportunity
 from ..rag.vector_store import vector_store
 from ..utils.config import config
 from ..utils.logger import get_logger

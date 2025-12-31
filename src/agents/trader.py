@@ -7,14 +7,12 @@ from typing import Optional
 from ..api.polymarket import PolymarketClient
 from ..models.market import Market, OrderSide
 from ..models.trade import (
-    Order,
     Portfolio,
     Prediction,
     ProposedTrade,
     RiskAssessment,
     Trade,
     TradeDirection,
-    TradeStatus,
 )
 from ..utils.config import config
 from ..utils.logger import get_logger

@@ -8,7 +8,7 @@ from ..models.news import NewsArticle
 from ..models.trade import Prediction, TradeDirection
 from ..utils.llm import llm_client
 from ..utils.logger import get_logger
-from ..utils.prompts import MARKET_ANALYSIS_TEMPLATE, build_news_context
+from ..utils.prompts import build_news_context
 
 logger = get_logger(__name__)
 
@@ -63,18 +63,6 @@ class ForecastingAgent:
             )
         else:
             news_text = "No recent relevant news available."
-
-        # Build prompt
-        prompt = MARKET_ANALYSIS_TEMPLATE.format(
-            question=market.question,
-            current_price=float(market.yes_price),
-            category=market.category,
-            liquidity=float(market.liquidity),
-            volume_24h=float(market.volume_24h),
-            end_date=market.end_date.isoformat(),
-            time_remaining=f"{market.time_to_resolution_hours:.1f} hours",
-            news_context=news_text,
-        )
 
         # Get prediction from LLM
         prediction_data = await llm_client.predict_market_outcome(

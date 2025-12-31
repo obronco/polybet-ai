@@ -1,7 +1,7 @@
 """Vector store for RAG (Retrieval-Augmented Generation) with hybrid search."""
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import chromadb
 from chromadb.config import Settings

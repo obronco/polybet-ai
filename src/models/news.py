@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -72,7 +72,7 @@ class NewsArticle(BaseModel):
     # Additional metadata
     language: str = Field(default="en", description="Article language")
     image_url: Optional[HttpUrl] = Field(None, description="Featured image URL")
-    metadata: Dict[str, any] = Field(
+    metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
