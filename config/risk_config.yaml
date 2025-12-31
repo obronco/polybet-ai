@@ -1,0 +1,83 @@
+# Risk Management Configuration
+
+# Position Sizing
+position_sizing:
+  method: kelly_criterion  # Options: kelly_criterion, fixed_fraction, fixed_amount
+  kelly_fraction: 0.25  # Use quarter Kelly for conservative sizing
+  max_bet_size_pct: 0.03  # Maximum 3% of bankroll per trade
+  min_bet_size_usd: 10  # Minimum bet size
+  max_bet_size_usd: 1000  # Absolute maximum per trade
+
+# Risk Limits
+risk_limits:
+  max_daily_loss_pct: 0.10  # Stop trading if down 10% in a day
+  max_weekly_loss_pct: 0.20  # Stop trading if down 20% in a week
+  max_drawdown_pct: 0.30  # Maximum acceptable drawdown
+  max_concurrent_positions: 10  # Maximum open positions
+  max_exposure_per_category_pct: 0.20  # Max 20% in any one category
+
+# Trade Requirements
+trade_requirements:
+  min_edge: 0.05  # Minimum 5% expected value
+  min_confidence: 6  # Minimum confidence score (1-10)
+  min_liquidity_for_size: 0.1  # Min liquidity as % of position size
+  max_slippage_tolerance: 0.02  # 2% max slippage
+
+# Circuit Breakers
+circuit_breakers:
+  enabled: true
+  daily_loss_threshold_pct: 0.15  # Pause at 15% daily loss
+  consecutive_losses: 5  # Pause after 5 consecutive losses
+  rapid_drawdown_pct: 0.08  # Pause if down 8% within 1 hour
+  cooldown_period_hours: 24  # Hours to wait after circuit breaker
+
+# Confidence Thresholds
+confidence_levels:
+  very_high: 9  # 90%+ confidence
+  high: 7       # 70%+ confidence
+  medium: 5     # 50%+ confidence
+  low: 3        # 30%+ confidence
+
+# Position size multipliers based on confidence
+confidence_multipliers:
+  very_high: 1.0  # Full Kelly
+  high: 0.75      # 75% of Kelly
+  medium: 0.5     # 50% of Kelly
+  low: 0.25       # 25% of Kelly
+
+# Portfolio Constraints
+portfolio:
+  max_correlation_threshold: 0.7  # Avoid highly correlated positions
+  diversification_min_categories: 2  # Spread across at least 2 categories
+  rebalance_threshold_pct: 0.05  # Rebalance if allocation drifts 5%
+
+# Stop Loss & Take Profit
+exit_rules:
+  use_stop_loss: true
+  stop_loss_pct: 0.50  # Exit if position down 50%
+  trailing_stop_pct: 0.30  # Trailing stop at 30%
+  take_profit_pct: 0.80  # Take profit at 80% gain
+  max_hold_time_hours: 168  # Max 7 days per position
+
+# Blacklist Rules
+blacklist:
+  enabled: true
+  auto_blacklist_on_losses: 3  # Blacklist market after 3 losses
+  blacklist_duration_days: 30
+  manual_blacklist:
+    - low_quality_market_id_example
+
+# Paper Trading
+paper_trading:
+  enabled: true  # Start with paper trading
+  initial_balance: 10000
+  track_performance: true
+  simulate_slippage: true
+  simulate_fees: true
+
+# Alerts & Notifications
+alerts:
+  notify_on_trade: true
+  notify_on_large_loss: true
+  notify_on_circuit_breaker: true
+  large_loss_threshold_pct: 0.05  # Alert if single trade loses 5%+

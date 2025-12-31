@@ -1,0 +1,103 @@
+# Market Selection and Filtering Configuration
+
+market_filters:
+  # Categories to focus on
+  categories:
+    - Politics
+    - Crypto
+    - Sports
+    - Business
+    - Science
+
+  # Liquidity requirements
+  min_liquidity_usd: 10000
+  min_volume_24h_usd: 5000
+
+  # Spread requirements
+  max_spread: 0.05  # 5% maximum spread
+
+  # Time constraints
+  min_time_to_resolution_hours: 24    # At least 1 day
+  max_time_to_resolution_hours: 720   # Max 30 days
+
+  # Market quality filters
+  min_num_traders: 10
+  exclude_binary: false
+
+# Focus keywords by category
+focus_keywords:
+  politics:
+    - election
+    - president
+    - congress
+    - senate
+    - governor
+    - vote
+    - poll
+    - debate
+    - primary
+    - candidate
+
+  crypto:
+    - bitcoin
+    - ethereum
+    - SEC
+    - regulation
+    - ETF
+    - price
+    - halving
+    - upgrade
+    - DeFi
+    - NFT
+
+  sports:
+    - championship
+    - playoffs
+    - tournament
+    - final
+    - MVP
+    - medal
+    - record
+    - draft
+    - trade
+    - transfer
+
+  business:
+    - earnings
+    - merger
+    - acquisition
+    - IPO
+    - bankruptcy
+    - CEO
+    - stock
+    - revenue
+    - profit
+    - layoff
+
+  science:
+    - discovery
+    - launch
+    - mission
+    - vaccine
+    - trial
+    - research
+    - breakthrough
+    - publication
+    - Nobel
+    - FDA
+
+# Market exclusions
+exclude_markets_containing:
+  - test
+  - joke
+  - meme
+  - scam
+
+# Priority markets (higher weight in analysis)
+priority_keywords:
+  - breaking
+  - major
+  - historic
+  - unprecedented
+  - confirmed
+  - official
