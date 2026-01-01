@@ -74,6 +74,9 @@ class AutonomousOrchestrator:
 
             if not news_articles:
                 logger.warning("no_news_articles_found")
+                cycle_duration = (datetime.now() - cycle_start).total_seconds()
+                results["duration_seconds"] = cycle_duration
+                results["completed_at"] = datetime.now().isoformat()
                 return results
 
             # Step 2: Get active markets
@@ -84,6 +87,9 @@ class AutonomousOrchestrator:
 
             if not markets:
                 logger.warning("no_active_markets_found")
+                cycle_duration = (datetime.now() - cycle_start).total_seconds()
+                results["duration_seconds"] = cycle_duration
+                results["completed_at"] = datetime.now().isoformat()
                 return results
 
             # Step 3: Find opportunities (correlate news with markets)
@@ -96,6 +102,9 @@ class AutonomousOrchestrator:
 
             if not opportunities:
                 logger.info("no_opportunities_found")
+                cycle_duration = (datetime.now() - cycle_start).total_seconds()
+                results["duration_seconds"] = cycle_duration
+                results["completed_at"] = datetime.now().isoformat()
                 return results
 
             # Step 4: Generate predictions for top opportunities
