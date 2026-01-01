@@ -1,6 +1,6 @@
 """Tests for Analyst Agent."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,6 +16,7 @@ def analyst():
 @pytest.fixture
 def mock_vector_store_results():
     """Mock vector store search results."""
+    from datetime import datetime
     return [
         {
             "id": "market_btc_100k",
@@ -23,12 +24,17 @@ def mock_vector_store_results():
             "relevance_score": 0.85,
             "metadata": {
                 "type": "market",
+                "id": "market_btc_100k",
                 "market_id": "market_btc_100k",
                 "category": "Crypto",
                 "status": "active",
                 "yes_price": 0.45,
+                "no_price": 0.55,
+                "spread": 0.01,
                 "liquidity": 50000,
+                "volume": 50000,
                 "volume_24h": 5000,
+                "start_date": datetime.now().isoformat(),
                 "end_date": "2025-12-31T23:59:59Z",
                 "question": "Will Bitcoin reach $100k by end of 2025?",
             },
@@ -39,12 +45,17 @@ def mock_vector_store_results():
             "relevance_score": 0.72,
             "metadata": {
                 "type": "market",
+                "id": "market_eth_upgrade",
                 "market_id": "market_eth_upgrade",
                 "category": "Crypto",
                 "status": "active",
                 "yes_price": 0.60,
+                "no_price": 0.40,
+                "spread": 0.01,
                 "liquidity": 30000,
+                "volume": 30000,
                 "volume_24h": 3000,
+                "start_date": datetime.now().isoformat(),
                 "end_date": "2025-06-30T23:59:59Z",
                 "question": "Will Ethereum upgrade succeed?",
             },
@@ -56,7 +67,7 @@ def mock_vector_store_results():
 async def test_analyze_news_market_correlation(analyst, sample_news_articles, sample_market):
     """Test news-market correlation analysis."""
     with patch("src.agents.analyst.llm_client") as mock_llm:
-        mock_llm.analyze_news_relevance = MagicMock(
+        mock_llm.analyze_news_relevance = AsyncMock(
             return_value={
                 "relevance": 0.8,
                 "impact": "positive",
@@ -131,6 +142,7 @@ async def test_find_news_for_markets(analyst, sample_market):
             {
                 "id": "news_btc_surge",
                 "hybrid_score": 0.88,
+                "relevance_score": 0.88,
                 "metadata": {
                     "type": "news",
                     "source": "newsapi",
@@ -158,7 +170,7 @@ async def test_find_news_for_markets(analyst, sample_market):
 async def test_evaluate_market_impact(analyst, sample_news_articles, sample_market):
     """Test evaluating market impact of news."""
     with patch("src.agents.analyst.llm_client") as mock_llm:
-        mock_llm.analyze_news_relevance = MagicMock(
+        mock_llm.analyze_news_relevance = AsyncMock(
             return_value={
                 "relevance": 0.85,
                 "impact": "positive",

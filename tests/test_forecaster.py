@@ -8,10 +8,16 @@ from src.agents.forecaster import ForecastingAgent
 
 
 @pytest.fixture
-def forecaster(mock_openai_client):
+def forecaster():
     """Create forecaster with mocked LLM."""
-    with patch("src.utils.llm.AsyncOpenAI") as mock_openai:
-        mock_openai.return_value = mock_openai_client
+    with patch("src.agents.forecaster.llm_client") as mock_llm:
+        # Mock the predict_market_outcome method
+        mock_llm.predict_market_outcome = AsyncMock(return_value={
+            "probability": 0.65,
+            "confidence": 7,
+            "reasoning": "Strong technical indicators suggest upward momentum",
+            "key_factors": ["institutional_adoption", "technical_analysis", "market_sentiment"]
+        })
         agent = ForecastingAgent(model="gpt-4-turbo", temperature=0.7)
         yield agent
 
