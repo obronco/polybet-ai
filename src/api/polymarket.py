@@ -29,7 +29,7 @@ class PolymarketClient:
             private_key: Wallet private key (defaults to config)
             chain_id: Blockchain chain ID
         """
-        self.private_key = private_key or config.settings.polygon_wallet_private_key
+        self.private_key = private_key or config.settings.polygon_wallet_private_key.get_secret_value()
         self.chain_id = chain_id
 
         # Initialize CLOB client
@@ -39,11 +39,12 @@ class PolymarketClient:
         )
 
         # Set API credentials if available
-        if config.settings.polymarket_api_key:
+        api_key_value = config.settings.polymarket_api_key.get_secret_value()
+        if api_key_value:
             self.client.set_api_creds(
-                api_key=config.settings.polymarket_api_key,
-                api_secret=config.settings.polymarket_api_secret,
-                api_passphrase=config.settings.polymarket_passphrase,
+                api_key=api_key_value,
+                api_secret=config.settings.polymarket_api_secret.get_secret_value(),
+                api_passphrase=config.settings.polymarket_passphrase.get_secret_value(),
             )
 
         logger.info("polymarket_client_initialized", chain_id=chain_id)

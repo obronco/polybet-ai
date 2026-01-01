@@ -9,6 +9,32 @@ import structlog
 from structlog.stdlib import LoggerFactory
 
 
+def mask_secrets(logger, method_name, event_dict):
+    """Mask sensitive fields in logs to prevent secret leakage.
+
+    Args:
+        logger: Logger instance
+        method_name: Method name
+        event_dict: Event dictionary
+
+    Returns:
+        Modified event dictionary with masked secrets
+    """
+    # List of sensitive key patterns to mask
+    sensitive_patterns = [
+        'api_key', 'secret', 'password', 'token', 'private_key',
+        'passphrase', 'credential', 'auth', 'bearer', 'wallet'
+    ]
+
+    # Mask any keys containing sensitive patterns
+    for key in list(event_dict.keys()):
+        key_lower = key.lower()
+        if any(pattern in key_lower for pattern in sensitive_patterns):
+            event_dict[key] = '***REDACTED***'
+
+    return event_dict
+
+
 def setup_logging(
     log_level: str = "INFO",
     log_file: Optional[str] = None,
@@ -30,6 +56,7 @@ def setup_logging(
 
     # Configure structlog processors
     processors = [
+        mask_secrets,  # FIRST: Mask secrets before any other processing
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.filter_by_level,
         structlog.processors.TimeStamper(fmt="iso"),

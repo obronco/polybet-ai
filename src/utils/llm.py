@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 
+from aiolimiter import AsyncLimiter
 from openai import AsyncOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -27,10 +28,14 @@ class LLMClient:
             model: Model name (defaults to config)
             temperature: Sampling temperature
         """
-        self.api_key = api_key or config.settings.openai_api_key
+        self.api_key = api_key or config.settings.openai_api_key.get_secret_value()
         self.model = model or config.settings.openai_model
         self.temperature = temperature
         self.client = AsyncOpenAI(api_key=self.api_key)
+
+        # Rate limiter: max calls per minute from config
+        rate_limit = config.settings.api_rate_limit_calls_per_minute
+        self.rate_limiter = AsyncLimiter(max_rate=rate_limit, time_period=60)
 
     @retry(
         stop=stop_after_attempt(3),
@@ -64,13 +69,15 @@ class LLMClient:
         )
 
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temp,
-                max_tokens=max_tokens,
-                **kwargs,
-            )
+            # Rate limit API calls to prevent quota exhaustion
+            async with self.rate_limiter:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=temp,
+                    max_tokens=max_tokens,
+                    **kwargs,
+                )
 
             content = response.choices[0].message.content
             logger.info(
@@ -167,10 +174,13 @@ Think step-by-step and be precise in your analysis."""
 
         Returns:
             Parsed prediction dict
+
+        Raises:
+            ValueError: If parsing fails or values are invalid
         """
         result = {
-            "probability": 0.5,
-            "confidence": 5,
+            "probability": None,
+            "confidence": None,
             "reasoning": response,
             "key_factors": [],
         }
@@ -190,12 +200,31 @@ Think step-by-step and be precise in your analysis."""
                 elif line.startswith("KEY_FACTORS:"):
                     factors = line.split(":", 1)[1].strip()
                     result["key_factors"] = [
-                        f.strip() for f in factors.split(",")
+                        f.strip() for f in factors.split(",") if f.strip()
                     ]
 
         except (ValueError, IndexError) as e:
-            logger.warning("prediction_parse_error", error=str(e))
-            # Return defaults with full response as reasoning
+            logger.error("prediction_parse_error", error=str(e), response=response[:200])
+            raise ValueError(f"Failed to parse LLM prediction response: {e}")
+
+        # Validate required fields were parsed
+        if result["probability"] is None or result["confidence"] is None:
+            logger.error(
+                "prediction_missing_fields",
+                has_probability=result["probability"] is not None,
+                has_confidence=result["confidence"] is not None,
+                response=response[:200]
+            )
+            raise ValueError("LLM response missing required PROBABILITY or CONFIDENCE fields")
+
+        # Validate ranges
+        if not (0 <= result["probability"] <= 1):
+            logger.error("invalid_probability", value=result["probability"])
+            raise ValueError(f"Invalid probability: {result['probability']} (must be 0-1)")
+
+        if not (1 <= result["confidence"] <= 10):
+            logger.error("invalid_confidence", value=result["confidence"])
+            raise ValueError(f"Invalid confidence: {result['confidence']} (must be 1-10)")
 
         return result
 

@@ -1,5 +1,6 @@
 """Trading Agent - Executes trades on Polymarket."""
 
+import os
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
@@ -33,6 +34,20 @@ class TradingAgent:
         self.polymarket_client = None
 
         if not self.paper_trading:
+            # CRITICAL SAFETY CHECK: Real trading mode
+            logger.critical(
+                "🚨 REAL TRADING MODE ENABLED - ACTUAL FUNDS AT RISK 🚨",
+                wallet_address=config.settings.polygon_wallet_address
+            )
+
+            # Require explicit confirmation via environment variable
+            if not os.getenv("I_CONFIRM_REAL_TRADING"):
+                raise RuntimeError(
+                    "Real trading requires I_CONFIRM_REAL_TRADING=true environment variable. "
+                    "This is a safety mechanism to prevent accidental real trades. "
+                    "Set this environment variable ONLY if you understand the risks."
+                )
+
             self.polymarket_client = PolymarketClient()
 
         self.portfolio = Portfolio(

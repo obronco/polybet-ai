@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import yaml
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -12,33 +12,33 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # Polymarket Configuration
-    polygon_wallet_private_key: str = Field(..., alias="POLYGON_WALLET_PRIVATE_KEY")
+    polygon_wallet_private_key: SecretStr = Field(..., alias="POLYGON_WALLET_PRIVATE_KEY")
     polygon_wallet_address: str = Field(..., alias="POLYGON_WALLET_ADDRESS")
 
-    polymarket_api_key: str = Field(default="", alias="POLYMARKET_API_KEY")
-    polymarket_api_secret: str = Field(default="", alias="POLYMARKET_API_SECRET")
-    polymarket_passphrase: str = Field(default="", alias="POLYMARKET_PASSPHRASE")
+    polymarket_api_key: SecretStr = Field(default=SecretStr(""), alias="POLYMARKET_API_KEY")
+    polymarket_api_secret: SecretStr = Field(default=SecretStr(""), alias="POLYMARKET_API_SECRET")
+    polymarket_passphrase: SecretStr = Field(default=SecretStr(""), alias="POLYMARKET_PASSPHRASE")
 
     # AI/LLM Configuration
-    openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
+    openai_api_key: SecretStr = Field(..., alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4-turbo-preview", alias="OPENAI_MODEL")
     openai_temperature: float = Field(default=0.7, alias="OPENAI_TEMPERATURE")
 
     # News Sources
-    newsapi_key: str = Field(..., alias="NEWSAPI_KEY")
-    tavily_api_key: str = Field(default="", alias="TAVILY_API_KEY")
+    newsapi_key: SecretStr = Field(..., alias="NEWSAPI_KEY")
+    tavily_api_key: SecretStr = Field(default=SecretStr(""), alias="TAVILY_API_KEY")
 
     # Optional: Twitter/X API
-    twitter_api_key: str = Field(default="", alias="TWITTER_API_KEY")
-    twitter_api_secret: str = Field(default="", alias="TWITTER_API_SECRET")
-    twitter_bearer_token: str = Field(default="", alias="TWITTER_BEARER_TOKEN")
+    twitter_api_key: SecretStr = Field(default=SecretStr(""), alias="TWITTER_API_KEY")
+    twitter_api_secret: SecretStr = Field(default=SecretStr(""), alias="TWITTER_API_SECRET")
+    twitter_bearer_token: SecretStr = Field(default=SecretStr(""), alias="TWITTER_BEARER_TOKEN")
 
     # Database Configuration
     chroma_persist_directory: str = Field(
         default="./data/chroma", alias="CHROMA_PERSIST_DIRECTORY"
     )
-    postgres_url: str = Field(
-        default="postgresql://user:password@localhost:5432/polybet",
+    postgres_url: SecretStr = Field(
+        default=SecretStr(""),
         alias="POSTGRES_URL",
     )
 
@@ -56,8 +56,8 @@ class Settings(BaseSettings):
 
     # Monitoring & Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
-    sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
-    telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
+    sentry_dsn: SecretStr = Field(default=SecretStr(""), alias="SENTRY_DSN")
+    telegram_bot_token: SecretStr = Field(default=SecretStr(""), alias="TELEGRAM_BOT_TOKEN")
     telegram_chat_id: str = Field(default="", alias="TELEGRAM_CHAT_ID")
 
     # System Configuration
@@ -74,6 +74,16 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         case_sensitive = False
         populate_by_name = True
+
+    def __repr__(self) -> str:
+        """Custom repr that never exposes secrets."""
+        return (
+            f"Settings("
+            f"paper_trading={self.paper_trading_mode}, "
+            f"log_level={self.log_level}, "
+            f"model={self.openai_model}"
+            f")"
+        )
 
 
 class ConfigManager:

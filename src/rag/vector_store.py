@@ -48,7 +48,7 @@ class VectorStore:
 
         # Use OpenAI embeddings
         self.embedding_function = embedding_functions.OpenAIEmbeddingFunction(
-            api_key=config.settings.openai_api_key,
+            api_key=config.settings.openai_api_key.get_secret_value(),
             model_name="text-embedding-3-small",
         )
 

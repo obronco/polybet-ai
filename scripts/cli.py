@@ -163,10 +163,10 @@ def config_check():
     console.print("\n[bold blue]Configuration Check[/bold blue]\n")
 
     checks = {
-        "OpenAI API Key": bool(config.settings.openai_api_key),
-        "NewsAPI Key": bool(config.settings.newsapi_key),
-        "Tavily API Key": bool(config.settings.tavily_api_key),
-        "Wallet Private Key": bool(config.settings.polygon_wallet_private_key),
+        "OpenAI API Key": bool(config.settings.openai_api_key.get_secret_value()),
+        "NewsAPI Key": bool(config.settings.newsapi_key.get_secret_value()),
+        "Tavily API Key": bool(config.settings.tavily_api_key.get_secret_value()),
+        "Wallet Private Key": bool(config.settings.polygon_wallet_private_key.get_secret_value()),
         "Paper Trading Mode": config.settings.paper_trading_mode,
     }
 

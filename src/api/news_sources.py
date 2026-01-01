@@ -6,6 +6,7 @@ from typing import List, Optional
 
 import aiohttp
 import feedparser
+from aiolimiter import AsyncLimiter
 from newsapi import NewsApiClient
 from tavily import AsyncTavilyClient
 
@@ -25,8 +26,13 @@ class NewsAPISource:
         Args:
             api_key: NewsAPI key (defaults to config)
         """
-        self.api_key = api_key or config.settings.newsapi_key
+        self.api_key = api_key or config.settings.newsapi_key.get_secret_value()
         self.client = NewsApiClient(api_key=self.api_key)
+
+        # Rate limiter: NewsAPI has 100 requests per day on free tier
+        # We'll use a conservative limit from config
+        rate_limit = config.settings.api_rate_limit_calls_per_minute
+        self.rate_limiter = AsyncLimiter(max_rate=rate_limit, time_period=60)
 
     async def search_news(
         self,
@@ -57,14 +63,16 @@ class NewsAPISource:
             to_date = datetime.now()
 
         try:
-            response = self.client.get_everything(
-                q=query,
-                from_param=from_date.strftime("%Y-%m-%d"),
-                to=to_date.strftime("%Y-%m-%d"),
-                language=language,
-                sort_by="publishedAt",
-                page_size=min(max_results, 100),  # NewsAPI max is 100
-            )
+            # Rate limit API calls
+            async with self.rate_limiter:
+                response = self.client.get_everything(
+                    q=query,
+                    from_param=from_date.strftime("%Y-%m-%d"),
+                    to=to_date.strftime("%Y-%m-%d"),
+                    language=language,
+                    sort_by="publishedAt",
+                    page_size=min(max_results, 100),  # NewsAPI max is 100
+                )
 
             articles = []
             for article_data in response.get("articles", []):
@@ -122,8 +130,12 @@ class TavilySource:
         Args:
             api_key: Tavily API key (defaults to config)
         """
-        self.api_key = api_key or config.settings.tavily_api_key
+        self.api_key = api_key or config.settings.tavily_api_key.get_secret_value()
         self.client = AsyncTavilyClient(api_key=self.api_key) if self.api_key else None
+
+        # Rate limiter: Use conservative limit from config
+        rate_limit = config.settings.api_rate_limit_calls_per_minute
+        self.rate_limiter = AsyncLimiter(max_rate=rate_limit, time_period=60)
 
     async def search_news(
         self,
@@ -148,12 +160,14 @@ class TavilySource:
         query = " ".join(keywords)
 
         try:
-            response = await self.client.search(
-                query=query,
-                max_results=max_results,
-                search_depth=search_depth,
-                include_raw_content=True,
-            )
+            # Rate limit API calls
+            async with self.rate_limiter:
+                response = await self.client.search(
+                    query=query,
+                    max_results=max_results,
+                    search_depth=search_depth,
+                    include_raw_content=True,
+                )
 
             articles = []
             for result in response.get("results", []):
