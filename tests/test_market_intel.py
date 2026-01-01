@@ -162,7 +162,8 @@ async def test_refresh_market_index(market_intel):
             count = await market_intel.refresh_market_index()
 
             assert count >= 0
-            mock_vs.add_markets.assert_called_once()
+            # add_markets is called twice: once in get_active_markets, once in refresh_market_index
+            assert mock_vs.add_markets.call_count == 2
 
 
 def test_get_market_summary(market_intel, sample_market):

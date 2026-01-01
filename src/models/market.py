@@ -52,9 +52,9 @@ class Market(BaseModel):
     num_traders: int = Field(default=0, description="Number of unique traders")
 
     # Pricing
-    yes_price: Decimal = Field(..., description="Current YES price (0-1)")
-    no_price: Decimal = Field(..., description="Current NO price (0-1)")
-    spread: Decimal = Field(..., description="Bid-ask spread")
+    yes_price: Decimal = Field(..., ge=0, le=1, description="Current YES price (0-1)")
+    no_price: Decimal = Field(..., ge=0, le=1, description="Current NO price (0-1)")
+    spread: Decimal = Field(..., ge=0, le=1, description="Bid-ask spread")
 
     # Metadata
     event_id: Optional[str] = Field(None, description="Associated event ID")

@@ -74,10 +74,10 @@ async def test_chat_completion_retry_on_failure(llm_client, mock_openai_client):
 
     messages = [{"role": "user", "content": "Test"}]
 
-    # Should retry and eventually succeed
-    with pytest.raises(Exception):
-        # Will fail after retries exhausted in test
-        await llm_client.chat_completion(messages)
+    # Should retry and eventually succeed (no exception raised)
+    result = await llm_client.chat_completion(messages)
+    assert result is not None
+    assert isinstance(result, str)
 
 
 @pytest.mark.asyncio
@@ -97,11 +97,10 @@ KEY_FACTORS: adoption, sentiment, technicals"""
 
 def test_parse_prediction_malformed(llm_client):
     """Test parsing malformed prediction response."""
+    import pytest
+
     response = "This is not a valid format"
 
-    result = llm_client._parse_prediction_response(response)
-
-    # Should return defaults
-    assert "probability" in result
-    assert "confidence" in result
-    assert result["reasoning"] == response
+    # Should raise ValueError for security (no unsafe defaults)
+    with pytest.raises(ValueError, match="LLM response missing required"):
+        llm_client._parse_prediction_response(response)

@@ -70,26 +70,36 @@ def mock_gamma_client():
     """Mock Gamma API client."""
     mock_client = AsyncMock()
 
-    # Mock market data
+    # Create actual Market objects instead of raw dicts
+    # Use future dates to ensure time_to_resolution is within filter range (24-720 hours)
+    from datetime import timedelta
+
+    future_end_date = datetime.now() + timedelta(days=7)  # 7 days from now (~168 hours)
+    start_date = datetime.now() - timedelta(days=30)  # Started 30 days ago
+
     mock_markets = [
-        {
-            "id": "market_btc_100k",
-            "question": "Will Bitcoin reach $100k by end of 2025?",
-            "description": "Prediction market for Bitcoin price",
-            "category": "Crypto",
-            "active": True,
-            "startDate": "2024-01-01T00:00:00Z",
-            "endDate": "2025-12-31T23:59:59Z",
-            "liquidity": 50000,
-            "volume": 100000,
-            "volume24hr": 5000,
-            "numTraders": 150,
-            "outcomePrices": ["0.45", "0.55"],
-        }
+        Market(
+            id="market_btc_100k",
+            question="Will Bitcoin reach $100k by end of 2025?",
+            description="Prediction market for Bitcoin price",
+            category="Crypto",
+            tags=["bitcoin", "crypto", "price"],
+            status=MarketStatus.ACTIVE,
+            start_date=start_date,
+            end_date=future_end_date,
+            liquidity=Decimal("50000"),
+            volume=Decimal("100000"),
+            volume_24h=Decimal("5000"),
+            num_traders=150,
+            yes_price=Decimal("0.45"),
+            no_price=Decimal("0.55"),
+            spread=Decimal("0.02"),
+        )
     ]
 
     mock_client.get_markets = AsyncMock(return_value=mock_markets)
     mock_client.get_market = AsyncMock(return_value=mock_markets[0])
+    mock_client.search_markets = AsyncMock(return_value=mock_markets)
 
     return mock_client
 
@@ -140,6 +150,12 @@ def mock_chromadb_collection():
 @pytest.fixture
 def sample_market():
     """Create a sample market for testing."""
+    from datetime import timedelta
+
+    # Use future dates to ensure time_to_resolution is within filter range (24-720 hours)
+    future_end_date = datetime.now() + timedelta(days=7)  # 7 days from now (~168 hours)
+    start_date = datetime.now() - timedelta(days=30)  # Started 30 days ago
+
     return Market(
         id="market_btc_100k",
         question="Will Bitcoin reach $100k by end of 2025?",
@@ -147,8 +163,8 @@ def sample_market():
         category="Crypto",
         tags=["bitcoin", "crypto", "price"],
         status=MarketStatus.ACTIVE,
-        start_date=datetime(2024, 1, 1),
-        end_date=datetime(2025, 12, 31),
+        start_date=start_date,
+        end_date=future_end_date,
         liquidity=Decimal("50000"),
         volume=Decimal("100000"),
         volume_24h=Decimal("5000"),
