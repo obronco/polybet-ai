@@ -1,4 +1,4 @@
-"""Orchestrator - Coordinates all agents for autonomous trading."""
+"""Orchestrator - Coordinates all pipelines for autonomous trading."""
 
 import asyncio
 from datetime import datetime
@@ -10,6 +10,11 @@ from .agents.market_intel import MarketIntelligenceAgent
 from .agents.news_scraper import NewsScraperAgent
 from .agents.risk_manager import RiskManagerAgent
 from .agents.trader import TradingAgent
+from .orchestration.news_pipeline import NewsPipeline
+from .orchestration.opportunity_finder import OpportunityFinder
+from .orchestration.position_manager import PositionManager
+from .orchestration.prediction_engine import PredictionEngine
+from .orchestration.trade_executor import TradeExecutor
 from .utils.config import config
 from .utils.logger import get_logger
 
@@ -17,7 +22,7 @@ logger = get_logger(__name__)
 
 
 class AutonomousOrchestrator:
-    """Orchestrates all agents for autonomous trading."""
+    """Orchestrates all pipelines for autonomous trading."""
 
     def __init__(
         self,
@@ -43,12 +48,28 @@ class AutonomousOrchestrator:
         logger.info("initializing_orchestrator", paper_trading=paper_trading)
 
         # Initialize all agents (use provided or create defaults)
-        self.news_scraper = news_scraper or NewsScraperAgent()
-        self.market_intel = market_intel or MarketIntelligenceAgent()
-        self.analyst = analyst or AnalystAgent()
-        self.forecaster = forecaster or ForecastingAgent()
-        self.risk_manager = risk_manager or RiskManagerAgent()
-        self.trader = trader or TradingAgent(paper_trading=paper_trading)
+        news_scraper = news_scraper or NewsScraperAgent()
+        market_intel = market_intel or MarketIntelligenceAgent()
+        analyst = analyst or AnalystAgent()
+        forecaster = forecaster or ForecastingAgent()
+        risk_manager = risk_manager or RiskManagerAgent()
+        trader = trader or TradingAgent(paper_trading=paper_trading)
+
+        # Initialize pipelines with agents
+        self.news_pipeline = NewsPipeline(news_scraper=news_scraper)
+        self.opportunity_finder = OpportunityFinder(
+            analyst=analyst,
+            market_intel=market_intel,
+        )
+        self.prediction_engine = PredictionEngine(forecaster=forecaster)
+        self.trade_executor = TradeExecutor(
+            trader=trader,
+            risk_manager=risk_manager,
+        )
+        self.position_manager = PositionManager(trader=trader)
+
+        # Keep reference to market_intel for fetching markets
+        self.market_intel = market_intel
 
         self.running = False
         self.cycle_count = 0
@@ -56,7 +77,14 @@ class AutonomousOrchestrator:
         logger.info("orchestrator_initialized")
 
     async def run_trading_cycle(self) -> Dict:
-        """Execute one complete trading cycle.
+        """Execute one complete trading cycle using pipelines.
+
+        This orchestrates the entire trading flow through specialized pipelines:
+        1. NewsPipeline: Fetch recent news
+        2. OpportunityFinder: Correlate news with markets
+        3. PredictionEngine: Generate predictions
+        4. TradeExecutor: Validate and execute trades
+        5. PositionManager: Update and manage positions
 
         Returns:
             Dict with cycle results
@@ -70,18 +98,17 @@ class AutonomousOrchestrator:
             "cycle": self.cycle_count,
             "started_at": cycle_start.isoformat(),
             "news_articles_found": 0,
-            "markets_analyzed": 0,
             "opportunities_identified": 0,
             "predictions_made": 0,
             "trades_executed": 0,
-            "trades_rejected": 0,
+            "positions_closed": 0,
             "errors": [],
         }
 
         try:
-            # Step 1: Scrape latest news
-            logger.info("step_1_scraping_news")
-            news_articles = await self.news_scraper.scrape_news(
+            # Step 1: Fetch recent news via NewsPipeline
+            logger.info("step_1_fetching_news")
+            news_articles = await self.news_pipeline.fetch_recent_news(
                 lookback_hours=config.settings.scrape_interval_minutes // 60 + 1,
                 max_results_per_source=50,
             )
