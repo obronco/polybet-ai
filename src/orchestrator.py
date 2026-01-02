@@ -116,161 +116,105 @@ class AutonomousOrchestrator:
 
             if not news_articles:
                 logger.warning("no_news_articles_found")
-                cycle_duration = (datetime.now() - cycle_start).total_seconds()
-                results["duration_seconds"] = cycle_duration
-                results["completed_at"] = datetime.now().isoformat()
-                return results
+                return self._finalize_results(results, cycle_start)
 
-            # Step 2: Get active markets
-            logger.info("step_2_fetching_markets")
-            async with self.market_intel as intel:
-                markets = await intel.get_active_markets(limit=100)
-            results["markets_analyzed"] = len(markets)
-
-            if not markets:
-                logger.warning("no_active_markets_found")
-                cycle_duration = (datetime.now() - cycle_start).total_seconds()
-                results["duration_seconds"] = cycle_duration
-                results["completed_at"] = datetime.now().isoformat()
-                return results
-
-            # Step 3: Find opportunities (correlate news with markets)
-            logger.info("step_3_finding_opportunities")
-            opportunities = await self.analyst.find_opportunities_from_news(
+            # Step 2: Find opportunities via OpportunityFinder
+            logger.info("step_2_finding_opportunities")
+            opportunities = await self.opportunity_finder.find_from_news(
                 news_articles=news_articles,
                 min_relevance=0.5,
+                top_k=10,
             )
             results["opportunities_identified"] = len(opportunities)
 
             if not opportunities:
                 logger.info("no_opportunities_found")
-                cycle_duration = (datetime.now() - cycle_start).total_seconds()
-                results["duration_seconds"] = cycle_duration
-                results["completed_at"] = datetime.now().isoformat()
-                return results
+                return self._finalize_results(results, cycle_start)
 
-            # Step 4: Generate predictions for top opportunities
-            logger.info("step_4_generating_predictions")
-            top_opportunities = opportunities[:10]  # Top 10 most relevant
-
-            predictions_made = []
-            trades_executed = []
-            trades_rejected = []
-
-            for opportunity in top_opportunities:
-                try:
-                    # Get relevant news for this market
-                    relevant_news = [
-                        article
-                        for article in news_articles
-                        if article.id in opportunity.news_context
-                    ]
-
-                    # Generate prediction
-                    prediction = await self.forecaster.predict_outcome(
-                        market=opportunity.market,
-                        news_context=relevant_news,
-                    )
-                    predictions_made.append(prediction)
-
-                    # Step 5: Risk assessment
-                    logger.info(
-                        "step_5_risk_assessment",
-                        market_id=opportunity.market.id,
-                    )
-                    risk_assessment = await self.risk_manager.validate_trade(
-                        prediction=prediction,
-                        market=opportunity.market,
-                        portfolio=self.trader.portfolio,
-                    )
-
-                    # Step 6: Execute trade if approved
-                    if risk_assessment.approved:
-                        logger.info(
-                            "step_6_executing_trade",
-                            market_id=opportunity.market.id,
-                        )
-                        trade = await self.trader.execute_trade(
-                            prediction=prediction,
-                            risk_assessment=risk_assessment,
-                            market=opportunity.market,
-                        )
-
-                        if trade:
-                            trades_executed.append(trade)
-                            logger.info(
-                                "trade_executed_successfully",
-                                trade_id=trade.id,
-                                market=opportunity.market.question[:50],
-                            )
-                        else:
-                            trades_rejected.append(
-                                {
-                                    "market_id": opportunity.market.id,
-                                    "reason": "execution_failed",
-                                }
-                            )
-                    else:
-                        trades_rejected.append(
-                            {
-                                "market_id": opportunity.market.id,
-                                "reason": "risk_assessment_failed",
-                                "checks_failed": risk_assessment.checks_failed,
-                            }
-                        )
-                        logger.info(
-                            "trade_rejected",
-                            market_id=opportunity.market.id,
-                            reason=risk_assessment.checks_failed,
-                        )
-
-                except Exception as e:
-                    logger.error(
-                        "opportunity_processing_error",
-                        market_id=opportunity.market.id,
-                        error=str(e),
-                    )
-                    results["errors"].append(
-                        {
-                            "market_id": opportunity.market.id,
-                            "error": str(e),
-                        }
-                    )
-
-            results["predictions_made"] = len(predictions_made)
-            results["trades_executed"] = len(trades_executed)
-            results["trades_rejected"] = len(trades_rejected)
-
-            # Step 7: Update existing positions
-            logger.info("step_7_updating_positions")
-            market_dict = {m.id: m for m in markets}
-            await self.trader.update_open_positions(market_dict)
-
-            # Apply exit rules
-            positions_closed = await self.trader.apply_exit_rules(market_dict)
-            results["positions_closed"] = positions_closed
-
-            # Check circuit breaker
-            circuit_breaker_triggered = self.risk_manager.check_circuit_breaker(
-                self.trader.portfolio
+            # Step 3: Generate predictions via PredictionEngine
+            logger.info("step_3_generating_predictions")
+            predictions = await self.prediction_engine.generate_predictions(
+                opportunities=opportunities,
             )
-            results["circuit_breaker_triggered"] = circuit_breaker_triggered
+
+            # Filter by confidence and edge
+            predictions = self.prediction_engine.filter_by_confidence(
+                predictions,
+                min_confidence=5,
+            )
+            predictions = self.prediction_engine.filter_by_edge(
+                predictions,
+                min_edge=0.05,
+            )
+
+            results["predictions_made"] = len(predictions)
+
+            if not predictions:
+                logger.info("no_predictions_met_criteria")
+                return self._finalize_results(results, cycle_start)
+
+            # Step 4: Execute approved trades via TradeExecutor
+            logger.info("step_4_executing_trades")
+            if not self.trade_executor.check_circuit_breaker():
+                trades = await self.trade_executor.execute_approved_trades(predictions)
+                results["trades_executed"] = len(trades)
+
+                if trades:
+                    logger.info("trades_executed_successfully", count=len(trades))
+            else:
+                logger.warning("circuit_breaker_active_skipping_trades")
+
+            # Step 5: Update positions via PositionManager
+            logger.info("step_5_updating_positions")
+            async with self.market_intel:
+                markets = await self.market_intel.get_active_markets(limit=100)
+
+            markets_dict = {m.id: m for m in markets}
+            closed_trades = await self.position_manager.update_and_exit(markets_dict)
+
+            results["positions_closed"] = len(closed_trades)
+
+            # Log portfolio status
+            portfolio_summary = self.position_manager.get_portfolio_summary()
+            logger.info(
+                "portfolio_status",
+                balance=portfolio_summary["balance"],
+                open_positions=portfolio_summary["open_positions"],
+                total_pnl=portfolio_summary["total_pnl"],
+            )
 
         except Exception as e:
-            logger.error("trading_cycle_error", error=str(e))
-            results["errors"].append({"error": str(e), "stage": "overall"})
+            logger.error("trading_cycle_error", error=str(e), cycle=self.cycle_count)
+            results["errors"].append({"error": str(e), "type": "cycle_error"})
 
+        # Finalize results
         cycle_duration = (datetime.now() - cycle_start).total_seconds()
         results["duration_seconds"] = cycle_duration
         results["completed_at"] = datetime.now().isoformat()
+
+        self._log_cycle_summary(results)
 
         logger.info(
             "trading_cycle_completed",
             cycle=self.cycle_count,
             duration=cycle_duration,
-            trades_executed=results["trades_executed"],
         )
 
+        return results
+
+    def _finalize_results(self, results: Dict, cycle_start: datetime) -> Dict:
+        """Helper to finalize results with timing info.
+
+        Args:
+            results: Results dict to finalize
+            cycle_start: Cycle start time
+
+        Returns:
+            Finalized results dict
+        """
+        cycle_duration = (datetime.now() - cycle_start).total_seconds()
+        results["duration_seconds"] = cycle_duration
+        results["completed_at"] = datetime.now().isoformat()
         return results
 
     async def run_continuous(
