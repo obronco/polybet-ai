@@ -276,6 +276,22 @@ class VectorStore:
             logger.error("search_news_error", error=str(e))
             return []
 
+    def _build_search_query(self, obj) -> str:
+        """Build search query string from Market or NewsArticle.
+
+        Args:
+            obj: Market or NewsArticle object
+
+        Returns:
+            Search query string
+        """
+        if isinstance(obj, Market):
+            return f"{obj.question} {obj.description or ''}"
+        elif isinstance(obj, NewsArticle):
+            return f"{obj.title} {obj.description or ''}"
+        else:
+            raise TypeError(f"Unsupported type for search query: {type(obj)}")
+
     def find_news_for_market(
         self,
         market: Market,
@@ -292,8 +308,8 @@ class VectorStore:
         Returns:
             List of relevant news articles
         """
-        # Use market question and description as query
-        query = f"{market.question} {market.description or ''}"
+        # Build search query
+        query = self._build_search_query(market)
 
         # Search for relevant news
         results = self.search_relevant_news(query, top_k=top_k * 2)
@@ -319,8 +335,8 @@ class VectorStore:
         Returns:
             List of relevant markets
         """
-        # Use article title and description as query
-        query = f"{article.title} {article.description or ''}"
+        # Build search query
+        query = self._build_search_query(article)
 
         # Search for similar markets
         results = self.search_similar_markets(query, top_k=top_k * 2)
@@ -591,7 +607,7 @@ class VectorStore:
         Returns:
             List of relevant news articles with hybrid scores
         """
-        query = f"{market.question} {market.description or ''}"
+        query = self._build_search_query(market)
 
         return self.hybrid_search_news(
             query=query,
@@ -618,7 +634,7 @@ class VectorStore:
         Returns:
             List of relevant markets with hybrid scores
         """
-        query = f"{article.title} {article.description or ''}"
+        query = self._build_search_query(article)
 
         return self.hybrid_search_markets(
             query=query,
