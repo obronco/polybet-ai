@@ -180,9 +180,9 @@ def build_market_context(market: dict) -> str:
     Returns:
         Formatted market context string
     """
-    return f"""Question: {market.get('question', 'Unknown')}
-Category: {market.get('category', 'Unknown')}
-Current YES Price: {market.get('yes_price', 0):.2%}
-Liquidity: ${market.get('liquidity', 0):,.0f}
-Volume (24h): ${market.get('volume_24h', 0):,.0f}
-Resolution Date: {market.get('end_date', 'Unknown')}"""
+    return f"""Question: {market.get("question", "Unknown")}
+Category: {market.get("category", "Unknown")}
+Current YES Price: {market.get("yes_price", 0):.2%}
+Liquidity: ${market.get("liquidity", 0):,.0f}
+Volume (24h): ${market.get("volume_24h", 0):,.0f}
+Resolution Date: {market.get("end_date", "Unknown")}"""

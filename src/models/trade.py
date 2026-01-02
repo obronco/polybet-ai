@@ -5,7 +5,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .market import Market, OrderSide
 
@@ -35,9 +35,7 @@ class Prediction(BaseModel):
     predicted_probability: Decimal = Field(
         ..., description="Predicted probability for YES outcome", ge=0, le=1
     )
-    confidence: int = Field(
-        ..., description="Confidence level (1-10)", ge=1, le=10
-    )
+    confidence: int = Field(..., description="Confidence level (1-10)", ge=1, le=10)
 
     # Analysis
     reasoning: str = Field(..., description="Explanation of the prediction")
@@ -55,9 +53,7 @@ class Prediction(BaseModel):
     edge: Decimal = Field(
         ..., description="Expected edge (predicted_prob - market_price)"
     )
-    expected_value: Decimal = Field(
-        ..., description="Expected value of the bet"
-    )
+    expected_value: Decimal = Field(..., description="Expected value of the bet")
 
     # Metadata
     created_at: datetime = Field(
@@ -77,8 +73,9 @@ class Prediction(BaseModel):
             return TradeDirection.LONG
         return TradeDirection.SHORT
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )
 
 
 class RiskAssessment(BaseModel):
@@ -112,8 +109,9 @@ class RiskAssessment(BaseModel):
         default_factory=datetime.now, description="Assessment timestamp"
     )
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )
 
 
 class ProposedTrade(BaseModel):
@@ -137,8 +135,9 @@ class ProposedTrade(BaseModel):
         default_factory=datetime.now, description="Proposal timestamp"
     )
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )
 
 
 class Order(BaseModel):
@@ -153,9 +152,7 @@ class Order(BaseModel):
     size: Decimal = Field(..., description="Order size in contracts/USD")
 
     # Execution
-    status: TradeStatus = Field(
-        default=TradeStatus.PENDING, description="Order status"
-    )
+    status: TradeStatus = Field(default=TradeStatus.PENDING, description="Order status")
     filled_size: Decimal = Field(default=Decimal(0), description="Filled amount")
     average_fill_price: Optional[Decimal] = Field(
         None, description="Average fill price"
@@ -182,8 +179,9 @@ class Order(BaseModel):
             return 0
         return float(self.filled_size / self.size * 100)
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )
 
 
 class Trade(BaseModel):
@@ -211,9 +209,7 @@ class Trade(BaseModel):
     closed: bool = Field(default=False, description="Whether position is closed")
 
     # Metadata
-    prediction_id: Optional[str] = Field(
-        None, description="Associated prediction ID"
-    )
+    prediction_id: Optional[str] = Field(None, description="Associated prediction ID")
     news_context: List[str] = Field(
         default_factory=list, description="News articles that influenced trade"
     )
@@ -258,8 +254,9 @@ class Trade(BaseModel):
 
         self.updated_at = datetime.now()
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )
 
 
 class Portfolio(BaseModel):
@@ -269,9 +266,7 @@ class Portfolio(BaseModel):
     initial_balance: Decimal = Field(..., description="Starting balance")
 
     # Positions
-    open_trades: List[Trade] = Field(
-        default_factory=list, description="Open positions"
-    )
+    open_trades: List[Trade] = Field(default_factory=list, description="Open positions")
     closed_trades: List[Trade] = Field(
         default_factory=list, description="Closed positions"
     )
@@ -311,5 +306,6 @@ class Portfolio(BaseModel):
         open_exposure = sum(trade.cost for trade in self.open_trades)
         return self.balance - open_exposure
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )

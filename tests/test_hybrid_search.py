@@ -1,14 +1,8 @@
 """Tests for Hybrid Search (BM25 + Vector Embeddings)."""
 
-from decimal import Decimal
-from datetime import datetime
-
 import pytest
 
-from src.models.market import Market, MarketStatus
-from src.models.news import NewsArticle, NewsSource
 from src.rag.bm25 import BM25
-from src.rag.vector_store import VectorStore
 
 
 @pytest.fixture
@@ -123,8 +117,8 @@ def test_hybrid_search_concept():
     hybrid_scores = {}
     for market_id in bm25_scores.keys():
         hybrid_scores[market_id] = (
-            bm25_scores[market_id] * bm25_weight +
-            vector_scores[market_id] * vector_weight
+            bm25_scores[market_id] * bm25_weight
+            + vector_scores[market_id] * vector_weight
         )
 
     # market1: 0.8*0.3 + 0.5*0.7 = 0.24 + 0.35 = 0.59

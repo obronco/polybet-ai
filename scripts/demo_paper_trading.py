@@ -137,7 +137,9 @@ async def run_demo():
     pred_table = Table(title="AI Prediction")
     pred_table.add_column("Metric", style="cyan")
     pred_table.add_column("Value", style="green")
-    pred_table.add_row("Predicted Probability", f"{prediction.predicted_probability:.2%}")
+    pred_table.add_row(
+        "Predicted Probability", f"{prediction.predicted_probability:.2%}"
+    )
     pred_table.add_row("Market Price", f"{market.yes_price:.2%}")
     pred_table.add_row("Edge", f"{prediction.edge:.2%}")
     pred_table.add_row("Confidence (1-10)", f"{prediction.confidence}/10")
@@ -214,9 +216,11 @@ async def run_demo():
     portfolio_table.add_column("Metric", style="cyan")
     portfolio_table.add_column("Value", style="green")
     portfolio_table.add_row("Balance", f"${portfolio_summary['balance']:,.2f}")
-    portfolio_table.add_row("Available Balance", f"${portfolio_summary['available_balance']:,.2f}")
-    portfolio_table.add_row("Total Trades", str(portfolio_summary['total_trades']))
-    portfolio_table.add_row("Open Positions", str(portfolio_summary['open_positions']))
+    portfolio_table.add_row(
+        "Available Balance", f"${portfolio_summary['available_balance']:,.2f}"
+    )
+    portfolio_table.add_row("Total Trades", str(portfolio_summary["total_trades"]))
+    portfolio_table.add_row("Open Positions", str(portfolio_summary["open_positions"]))
     portfolio_table.add_row("Total P&L", f"${portfolio_summary['total_pnl']:,.2f}")
     console.print(portfolio_table)
 

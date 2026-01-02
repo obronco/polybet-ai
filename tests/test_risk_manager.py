@@ -7,7 +7,7 @@ import pytest
 
 from src.agents.risk_manager import RiskManagerAgent
 from src.models.market import Market, MarketStatus
-from src.models.trade import Prediction, Portfolio, TradeDirection
+from src.models.trade import Prediction, Portfolio
 
 
 @pytest.fixture
@@ -66,7 +66,9 @@ def sample_portfolio():
     )
 
 
-def test_validate_trade_approved(risk_manager, sample_prediction, sample_market, sample_portfolio):
+def test_validate_trade_approved(
+    risk_manager, sample_prediction, sample_market, sample_portfolio
+):
     """Test trade validation with valid trade."""
     import asyncio
 
@@ -85,7 +87,9 @@ def test_validate_trade_approved(risk_manager, sample_prediction, sample_market,
     asyncio.run(run_test())
 
 
-def test_validate_trade_low_confidence(risk_manager, sample_prediction, sample_market, sample_portfolio):
+def test_validate_trade_low_confidence(
+    risk_manager, sample_prediction, sample_market, sample_portfolio
+):
     """Test trade rejection due to low confidence."""
     import asyncio
 
@@ -105,7 +109,9 @@ def test_validate_trade_low_confidence(risk_manager, sample_prediction, sample_m
     asyncio.run(run_test())
 
 
-def test_validate_trade_low_edge(risk_manager, sample_prediction, sample_market, sample_portfolio):
+def test_validate_trade_low_edge(
+    risk_manager, sample_prediction, sample_market, sample_portfolio
+):
     """Test trade rejection due to insufficient edge."""
     import asyncio
 
@@ -147,7 +153,9 @@ def test_circuit_breaker_trigger(risk_manager, sample_portfolio):
     assert risk_manager.circuit_breaker_active is True
 
 
-def test_position_size_constraints(risk_manager, sample_prediction, sample_market, sample_portfolio):
+def test_position_size_constraints(
+    risk_manager, sample_prediction, sample_market, sample_portfolio
+):
     """Test position sizing respects min/max constraints."""
     size = risk_manager.calculate_position_size(
         prediction=sample_prediction,

@@ -299,9 +299,7 @@ class VectorStore:
         results = self.search_relevant_news(query, top_k=top_k * 2)
 
         # Filter by relevance threshold
-        filtered_results = [
-            r for r in results if r["relevance_score"] >= min_relevance
-        ]
+        filtered_results = [r for r in results if r["relevance_score"] >= min_relevance]
 
         return filtered_results[:top_k]
 
@@ -474,11 +472,9 @@ class VectorStore:
                 combined_scores[doc_id] = vector_score * vector_weight
 
         # Sort by combined score
-        ranked = sorted(
-            combined_scores.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )[:top_k]
+        ranked = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[
+            :top_k
+        ]
 
         # Get full metadata for top results
         results = []
@@ -490,13 +486,15 @@ class VectorStore:
                     metadata = vr.get("metadata", {})
                     break
 
-            results.append({
-                "id": doc_id,
-                "score": score,
-                "hybrid_score": score,
-                "metadata": metadata or {},
-                "type": "market",
-            })
+            results.append(
+                {
+                    "id": doc_id,
+                    "score": score,
+                    "hybrid_score": score,
+                    "metadata": metadata or {},
+                    "type": "market",
+                }
+            )
 
         logger.debug(
             "hybrid_search_markets",
@@ -557,11 +555,9 @@ class VectorStore:
                 combined_scores[doc_id] = vector_score * vector_weight
 
         # Sort by combined score
-        ranked = sorted(
-            combined_scores.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )[:top_k]
+        ranked = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[
+            :top_k
+        ]
 
         # Get full metadata for top results
         results = []
@@ -573,14 +569,16 @@ class VectorStore:
                     metadata = vr.get("metadata", {})
                     break
 
-            results.append({
-                "id": doc_id,
-                "score": score,
-                "hybrid_score": score,
-                "relevance_score": score,  # For compatibility
-                "metadata": metadata or {},
-                "type": "news",
-            })
+            results.append(
+                {
+                    "id": doc_id,
+                    "score": score,
+                    "hybrid_score": score,
+                    "relevance_score": score,  # For compatibility
+                    "metadata": metadata or {},
+                    "type": "news",
+                }
+            )
 
         logger.debug(
             "hybrid_search_news",

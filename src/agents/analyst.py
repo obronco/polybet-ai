@@ -70,9 +70,7 @@ class AnalystAgent:
         logger.info(
             "correlation_analysis_complete",
             relevant_markets=len(opportunities),
-            top_relevance=(
-                opportunities[0].relevance_score if opportunities else 0
-            ),
+            top_relevance=(opportunities[0].relevance_score if opportunities else 0),
         )
 
         return opportunities[:top_k]
@@ -109,15 +107,16 @@ class AnalystAgent:
 
             # Filter by minimum relevance
             related_markets = [
-                m for m in related_markets
-                if m.get("hybrid_score", 0) >= min_relevance
+                m for m in related_markets if m.get("hybrid_score", 0) >= min_relevance
             ]
 
             for market_data in related_markets:
                 # Create opportunity
                 opportunity = MarketOpportunity(
                     market=Market(**market_data["metadata"]),
-                    relevance_score=market_data.get("hybrid_score", market_data.get("relevance_score", 0.5)),
+                    relevance_score=market_data.get(
+                        "hybrid_score", market_data.get("relevance_score", 0.5)
+                    ),
                     news_context=[article.id],
                     metadata={
                         "news_title": article.title,
@@ -171,7 +170,8 @@ class AnalystAgent:
 
             # Filter by minimum relevance
             relevant_news_data = [
-                n for n in relevant_news_data
+                n
+                for n in relevant_news_data
                 if n.get("hybrid_score", 0) >= min_relevance
             ]
 

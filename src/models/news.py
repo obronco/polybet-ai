@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class NewsSource(str, Enum):
@@ -80,7 +80,11 @@ class NewsArticle(BaseModel):
     def age_hours(self) -> float:
         """Calculate article age in hours."""
         # Make datetime.now() timezone-aware to match published_at
-        now = datetime.now(self.published_at.tzinfo) if self.published_at.tzinfo else datetime.now()
+        now = (
+            datetime.now(self.published_at.tzinfo)
+            if self.published_at.tzinfo
+            else datetime.now()
+        )
         delta = now - self.published_at
         return delta.total_seconds() / 3600
 
@@ -88,11 +92,9 @@ class NewsArticle(BaseModel):
         """Check if article is recent (default: within 24 hours)."""
         return self.age_hours <= hours
 
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-            HttpUrl: str,
-        }
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat(), HttpUrl: str},
+    )
 
 
 class NewsQuery(BaseModel):
@@ -141,5 +143,6 @@ class NewsCluster(BaseModel):
             return None
         return max(self.articles, key=lambda a: a.published_at)
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()},
+    )

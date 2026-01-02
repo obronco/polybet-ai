@@ -5,7 +5,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MarketStatus(str, Enum):
@@ -82,8 +82,9 @@ class Market(BaseModel):
         """Get implied probability for YES outcome."""
         return float(self.yes_price)
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )
 
 
 class Event(BaseModel):
@@ -98,8 +99,9 @@ class Event(BaseModel):
     end_date: datetime = Field(..., description="Event end date")
     tags: List[str] = Field(default_factory=list, description="Event tags")
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()},
+    )
 
 
 class OrderBook(BaseModel):
@@ -135,8 +137,9 @@ class OrderBook(BaseModel):
             return self.best_ask - self.best_bid
         return None
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )
 
 
 class MarketOpportunity(BaseModel):
@@ -159,5 +162,6 @@ class MarketOpportunity(BaseModel):
         default_factory=dict, description="Additional metadata"
     )
 
-    class Config:
-        json_encoders = {Decimal: str, datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        json_encoders={Decimal: str, datetime: lambda v: v.isoformat()},
+    )

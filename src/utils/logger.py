@@ -22,15 +22,23 @@ def mask_secrets(logger, method_name, event_dict):
     """
     # List of sensitive key patterns to mask
     sensitive_patterns = [
-        'api_key', 'secret', 'password', 'token', 'private_key',
-        'passphrase', 'credential', 'auth', 'bearer', 'wallet'
+        "api_key",
+        "secret",
+        "password",
+        "token",
+        "private_key",
+        "passphrase",
+        "credential",
+        "auth",
+        "bearer",
+        "wallet",
     ]
 
     # Mask any keys containing sensitive patterns
     for key in list(event_dict.keys()):
         key_lower = key.lower()
         if any(pattern in key_lower for pattern in sensitive_patterns):
-            event_dict[key] = '***REDACTED***'
+            event_dict[key] = "***REDACTED***"
 
     return event_dict
 

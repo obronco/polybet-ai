@@ -8,7 +8,7 @@ import pytest
 
 from src.models.market import Market, MarketStatus
 from src.models.news import NewsArticle, NewsSource
-from src.models.trade import Prediction, Portfolio, TradeDirection
+from src.models.trade import Prediction, Portfolio
 
 
 @pytest.fixture
