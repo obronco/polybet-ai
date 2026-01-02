@@ -88,15 +88,15 @@ async def test_analyze_news_market_correlation(
         }
     )
 
-        opportunities = await analyst.analyze_news_market_correlation(
-            news_article=sample_news_articles[0],
-            markets=[sample_market],
-            top_k=5,
-        )
+    opportunities = await analyst.analyze_news_market_correlation(
+        news_article=sample_news_articles[0],
+        markets=[sample_market],
+        top_k=5,
+    )
 
-        assert len(opportunities) > 0
-        assert opportunities[0].market.id == sample_market.id
-        assert opportunities[0].relevance_score > 0
+    assert len(opportunities) > 0
+    assert opportunities[0].market.id == sample_market.id
+    assert opportunities[0].relevance_score > 0
 
 
 @pytest.mark.asyncio
@@ -104,104 +104,101 @@ async def test_find_opportunities_from_news(
     analyst, sample_news_articles, mock_vector_store_results
 ):
     """Test finding opportunities from news articles."""
-    with patch("src.agents.analyst.vector_store") as mock_vs:
-        mock_vs.hybrid_find_markets_for_news.return_value = mock_vector_store_results
+    # Configure the injected mock
+    analyst.vector_store.hybrid_find_markets_for_news.return_value = mock_vector_store_results
 
-        opportunities = await analyst.find_opportunities_from_news(
-            news_articles=sample_news_articles,
-            min_relevance=0.5,
-        )
+    opportunities = await analyst.find_opportunities_from_news(
+        news_articles=sample_news_articles,
+        min_relevance=0.5,
+    )
 
-        assert len(opportunities) > 0
-        # Should use hybrid search
-        mock_vs.hybrid_find_markets_for_news.assert_called()
+    assert len(opportunities) > 0
+    # Should use hybrid search
+    analyst.vector_store.hybrid_find_markets_for_news.assert_called()
 
 
 @pytest.mark.asyncio
 async def test_find_opportunities_filters_low_relevance(analyst, sample_news_articles):
     """Test filtering low relevance opportunities."""
-    with patch("src.agents.analyst.vector_store") as mock_vs:
-        low_relevance_results = [
-            {
-                "id": "market1",
-                "hybrid_score": 0.3,  # Below threshold
-                "metadata": {
-                    "type": "market",
-                    "market_id": "market1",
-                    "category": "Test",
-                    "question": "Test?",
-                    "status": "active",
-                    "yes_price": 0.5,
-                    "liquidity": 1000,
-                    "volume_24h": 100,
-                    "end_date": "2025-12-31T00:00:00Z",
-                },
-            }
-        ]
-        mock_vs.hybrid_find_markets_for_news.return_value = low_relevance_results
+    low_relevance_results = [
+        {
+            "id": "market1",
+            "hybrid_score": 0.3,  # Below threshold
+            "metadata": {
+                "type": "market",
+                "market_id": "market1",
+                "category": "Test",
+                "question": "Test?",
+                "status": "active",
+                "yes_price": 0.5,
+                "liquidity": 1000,
+                "volume_24h": 100,
+                "end_date": "2025-12-31T00:00:00Z",
+            },
+        }
+    ]
+    analyst.vector_store.hybrid_find_markets_for_news.return_value = low_relevance_results
 
-        opportunities = await analyst.find_opportunities_from_news(
-            news_articles=sample_news_articles,
-            min_relevance=0.5,  # Higher threshold
-        )
+    opportunities = await analyst.find_opportunities_from_news(
+        news_articles=sample_news_articles,
+        min_relevance=0.5,  # Higher threshold
+    )
 
-        # Should filter out low relevance
-        assert len(opportunities) == 0
+    # Should filter out low relevance
+    assert len(opportunities) == 0
 
 
 @pytest.mark.asyncio
 async def test_find_news_for_markets(analyst, sample_market):
     """Test finding news for markets."""
-    with patch("src.agents.analyst.vector_store") as mock_vs:
-        mock_news_results = [
-            {
-                "id": "news_btc_surge",
-                "hybrid_score": 0.88,
-                "relevance_score": 0.88,
-                "metadata": {
-                    "type": "news",
-                    "source": "newsapi",
-                    "source_name": "CryptoNews",
-                    "url": "https://example.com/news",
-                    "published_at": "2024-01-15T10:00:00Z",
-                    "title": "Bitcoin Surges",
-                },
-            }
-        ]
-        mock_vs.hybrid_find_news_for_market.return_value = mock_news_results
+    mock_news_results = [
+        {
+            "id": "news_btc_surge",
+            "hybrid_score": 0.88,
+            "relevance_score": 0.88,
+            "metadata": {
+                "type": "news",
+                "source": "newsapi",
+                "source_name": "CryptoNews",
+                "url": "https://example.com/news",
+                "published_at": "2024-01-15T10:00:00Z",
+                "title": "Bitcoin Surges",
+            },
+        }
+    ]
+    analyst.vector_store.hybrid_find_news_for_market.return_value = mock_news_results
 
-        results = await analyst.find_news_for_markets(
-            markets=[sample_market],
-            min_relevance=0.5,
-        )
+    results = await analyst.find_news_for_markets(
+        markets=[sample_market],
+        min_relevance=0.5,
+    )
 
-        assert len(results) > 0
-        market, news_articles = results[0]
-        assert market.id == sample_market.id
-        assert len(news_articles) > 0
+    assert len(results) > 0
+    market, news_articles = results[0]
+    assert market.id == sample_market.id
+    assert len(news_articles) > 0
 
 
 @pytest.mark.asyncio
 async def test_evaluate_market_impact(analyst, sample_news_articles, sample_market):
     """Test evaluating market impact of news."""
-    with patch("src.agents.analyst.llm_client") as mock_llm:
-        mock_llm.analyze_news_relevance = AsyncMock(
-            return_value={
-                "relevance": 0.85,
-                "impact": "positive",
-                "explanation": "Bitcoin surge is bullish for BTC $100k prediction",
-            }
-        )
+    analyst.llm_client.analyze_news_relevance = AsyncMock(
+        return_value={
+            "relevance": 0.85,
+            "impact": "positive",
+            "explanation": "Bitcoin surge is bullish for BTC $100k prediction",
+        }
+    )
 
-        impact = await analyst.evaluate_market_impact(
-            news_article=sample_news_articles[0],
-            market=sample_market,
-        )
+    impact = await analyst.evaluate_market_impact(
+        news_article=sample_news_articles[0],
+        market=sample_market,
+    )
 
-        assert "relevance_score" in impact
-        assert "impact_direction" in impact
-        assert "explanation" in impact
-        assert impact["relevance_score"] > 0
+    assert "relevance_score" in impact
+    assert "impact_direction" in impact
+    assert "explanation" in impact
+    assert impact["relevance_score"] > 0
 
 
 def test_consolidate_opportunities(analyst):

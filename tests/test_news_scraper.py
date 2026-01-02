@@ -1,6 +1,6 @@
 """Tests for News Scraper Agent."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -10,19 +10,23 @@ from src.agents.news_scraper import NewsScraperAgent
 @pytest.fixture
 def news_scraper(mock_newsapi_client):
     """Create news scraper with mocked APIs."""
+    # Create mock vector store
+    mock_vector_store = MagicMock()
+    mock_vector_store.add_news_articles.return_value = 2
+
+    # Mock the NewsApiClient to return our mock
     with patch("src.api.news_sources.NewsApiClient") as mock_newsapi:
         mock_newsapi.return_value = mock_newsapi_client
 
-        # Mock vector store
-        with patch("src.agents.news_scraper.vector_store") as mock_vs:
-            mock_vs.add_news_articles.return_value = 2
+        # Create agent with mocked dependencies
+        agent = NewsScraperAgent(
+            newsapi_key="test_key",
+            tavily_key=None,
+            rss_feeds=[],
+            vector_store=mock_vector_store,
+        )
 
-            agent = NewsScraperAgent(
-                newsapi_key="test_key",
-                tavily_key=None,
-                rss_feeds=[],
-            )
-            yield agent
+        return agent
 
 
 @pytest.mark.asyncio
@@ -124,14 +128,12 @@ async def test_scrape_news_empty_results(news_scraper, mock_newsapi_client):
 @pytest.mark.asyncio
 async def test_scrape_news_indexes_in_vector_store(news_scraper):
     """Test that scraped news is indexed in vector store."""
-    with patch("src.agents.news_scraper.vector_store") as mock_vs:
-        mock_vs.add_news_articles.return_value = 2
+    # Vector store is already injected via fixture
+    articles = await news_scraper.scrape_news()
 
-        articles = await news_scraper.scrape_news()
-
-        # Should have called vector store to index
-        if len(articles) > 0:
-            mock_vs.add_news_articles.assert_called_once()
+    # Should have called vector store to index
+    if len(articles) > 0:
+        news_scraper.vector_store.add_news_articles.assert_called_once()
 
 
 def test_get_category_keywords_invalid_category(news_scraper):

@@ -1,6 +1,6 @@
 """Tests for Forecasting Agent."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -10,22 +10,29 @@ from src.agents.forecaster import ForecastingAgent
 @pytest.fixture
 def forecaster():
     """Create forecaster with mocked LLM."""
-    with patch("src.agents.forecaster.llm_client") as mock_llm:
-        # Mock the predict_market_outcome method
-        mock_llm.predict_market_outcome = AsyncMock(
-            return_value={
-                "probability": 0.65,
-                "confidence": 7,
-                "reasoning": "Strong technical indicators suggest upward momentum",
-                "key_factors": [
-                    "institutional_adoption",
-                    "technical_analysis",
-                    "market_sentiment",
-                ],
-            }
-        )
-        agent = ForecastingAgent(model="gpt-4-turbo", temperature=0.7)
-        yield agent
+    # Create mock LLM client
+    mock_llm = MagicMock()
+    mock_llm.predict_market_outcome = AsyncMock(
+        return_value={
+            "probability": 0.65,
+            "confidence": 7,
+            "reasoning": "Strong technical indicators suggest upward momentum",
+            "key_factors": [
+                "institutional_adoption",
+                "technical_analysis",
+                "market_sentiment",
+            ],
+        }
+    )
+
+    # Create forecaster with mocked LLM client
+    agent = ForecastingAgent(
+        model="gpt-4-turbo",
+        temperature=0.7,
+        llm_client=mock_llm
+    )
+
+    return agent
 
 
 @pytest.mark.asyncio

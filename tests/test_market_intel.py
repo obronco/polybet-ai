@@ -1,6 +1,6 @@
 """Tests for Market Intelligence Agent."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
@@ -11,13 +11,17 @@ from src.agents.market_intel import MarketIntelligenceAgent
 @pytest_asyncio.fixture
 async def market_intel(mock_gamma_client):
     """Create market intelligence agent with mocked Gamma client."""
-    with patch("src.agents.market_intel.GammaClient") as mock_gamma:
-        mock_gamma.return_value = mock_gamma_client
+    # Create mock vector store
+    mock_vector_store = MagicMock()
+    mock_vector_store.add_markets.return_value = 10
 
-        agent = MarketIntelligenceAgent()
-        agent.gamma_client = mock_gamma_client
+    # Create agent with mocked dependencies
+    agent = MarketIntelligenceAgent(
+        gamma_client=mock_gamma_client,
+        vector_store=mock_vector_store,
+    )
 
-        yield agent
+    yield agent
 
 
 @pytest.mark.asyncio
@@ -155,15 +159,13 @@ async def test_get_high_liquidity_markets(market_intel):
 @pytest.mark.asyncio
 async def test_refresh_market_index(market_intel):
     """Test refreshing market index."""
-    with patch("src.agents.market_intel.vector_store") as mock_vs:
-        mock_vs.add_markets.return_value = 10
+    # Vector store is already injected via fixture
+    async with market_intel:
+        count = await market_intel.refresh_market_index()
 
-        async with market_intel:
-            count = await market_intel.refresh_market_index()
-
-            assert count >= 0
-            # add_markets is called twice: once in get_active_markets, once in refresh_market_index
-            assert mock_vs.add_markets.call_count == 2
+        assert count >= 0
+        # add_markets is called twice: once in get_active_markets, once in refresh_market_index
+        assert market_intel.vector_store.add_markets.call_count == 2
 
 
 def test_get_market_summary(market_intel, sample_market):
