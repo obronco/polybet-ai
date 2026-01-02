@@ -8,13 +8,13 @@ from typing import Optional
 from ..api.polymarket import PolymarketClient
 from ..models.market import Market, OrderSide
 from ..models.trade import (
-    Portfolio,
     Prediction,
     ProposedTrade,
     RiskAssessment,
     Trade,
     TradeDirection,
 )
+from ..services.portfolio_service import PortfolioService
 from ..utils.config import config
 from ..utils.logger import get_logger
 
@@ -28,12 +28,14 @@ class TradingAgent:
         self,
         paper_trading: bool = True,
         polymarket_client: Optional[PolymarketClient] = None,
+        portfolio_service: Optional[PortfolioService] = None,
     ):
         """Initialize Trading Agent.
 
         Args:
             paper_trading: Whether to use paper trading mode
             polymarket_client: Polymarket client instance (creates default if needed for real trading)
+            portfolio_service: Portfolio service instance (creates default if None)
         """
         self.paper_trading = paper_trading or config.settings.paper_trading_mode
 
@@ -56,22 +58,21 @@ class TradingAgent:
         else:
             self.polymarket_client = polymarket_client  # May be None for paper trading
 
-        self.portfolio = Portfolio(
-            balance=Decimal(
+        # Use injected portfolio service or create default
+        if portfolio_service is None:
+            initial_balance = Decimal(
                 str(
                     config.risk_config.get("paper_trading", {}).get(
                         "initial_balance", 10000
                     )
                 )
-            ),
-            initial_balance=Decimal(
-                str(
-                    config.risk_config.get("paper_trading", {}).get(
-                        "initial_balance", 10000
-                    )
-                )
-            ),
-        )
+            )
+            self.portfolio_service = PortfolioService(initial_balance=initial_balance)
+        else:
+            self.portfolio_service = portfolio_service
+
+        # Backwards compatibility: expose portfolio attribute
+        self.portfolio = self.portfolio_service.portfolio
 
         logger.info(
             "trading_agent_initialized",
@@ -128,11 +129,9 @@ class TradingAgent:
         else:
             trade = await self._execute_real_trade(proposed_trade)
 
-        # Update portfolio
+        # Add to portfolio
         if trade:
-            self.portfolio.open_trades.append(trade)
-            self.portfolio.total_trades += 1
-            self.portfolio.updated_at = datetime.now()
+            self.portfolio_service.add_trade(trade)
 
         return trade
 
@@ -268,35 +267,12 @@ class TradingAgent:
     async def update_open_positions(self, markets: dict) -> None:
         """Update P&L for open positions.
 
+        Delegates to portfolio service.
+
         Args:
             markets: Dict mapping market_id to current Market data
         """
-        logger.debug("updating_open_positions", count=len(self.portfolio.open_trades))
-
-        total_pnl = Decimal(0)
-
-        for trade in self.portfolio.open_trades:
-            if trade.closed:
-                continue
-
-            # Get current market price
-            market = markets.get(trade.market_id)
-            if not market:
-                continue
-
-            # Update trade P&L
-            if trade.side == OrderSide.YES:
-                current_price = market.yes_price
-            else:
-                current_price = market.no_price
-
-            trade.update_pnl(current_price)
-            total_pnl += trade.pnl
-
-        self.portfolio.total_pnl = total_pnl
-        self.portfolio.updated_at = datetime.now()
-
-        logger.debug("positions_updated", total_pnl=float(total_pnl))
+        self.portfolio_service.update_open_positions(markets)
 
     async def close_position(
         self,
@@ -306,6 +282,8 @@ class TradingAgent:
     ) -> Trade:
         """Close an open position.
 
+        Delegates to portfolio service.
+
         Args:
             trade: Trade to close
             exit_price: Exit price
@@ -314,43 +292,12 @@ class TradingAgent:
         Returns:
             Updated Trade object
         """
-        logger.info(
-            "closing_position",
-            trade_id=trade.id,
-            exit_price=float(exit_price),
-            reason=reason,
-        )
-
-        # Update trade
-        trade.exit_price = exit_price
-        trade.exit_at = datetime.now()
-        trade.closed = True
-        trade.update_pnl(exit_price)
-        trade.notes += f"\nClosed: {reason}"
-
-        # Update portfolio
-        self.portfolio.open_trades.remove(trade)
-        self.portfolio.closed_trades.append(trade)
-
-        if trade.is_profitable:
-            self.portfolio.winning_trades += 1
-        else:
-            self.portfolio.losing_trades += 1
-
-        # Update balance
-        self.portfolio.balance += trade.pnl
-
-        logger.info(
-            "position_closed",
-            trade_id=trade.id,
-            pnl=float(trade.pnl),
-            new_balance=float(self.portfolio.balance),
-        )
-
-        return trade
+        return self.portfolio_service.close_position(trade, exit_price, reason)
 
     async def apply_exit_rules(self, markets: dict) -> int:
         """Apply exit rules to open positions.
+
+        Delegates to portfolio service.
 
         Args:
             markets: Dict of current market data
@@ -358,63 +305,14 @@ class TradingAgent:
         Returns:
             Number of positions closed
         """
-        exit_rules = config.risk_config.get("exit_rules", {})
-        if not exit_rules.get("use_stop_loss", False):
-            return 0
-
-        stop_loss_pct = Decimal(str(exit_rules.get("stop_loss_pct", 0.5)))
-        take_profit_pct = Decimal(str(exit_rules.get("take_profit_pct", 0.8)))
-
-        closed_count = 0
-
-        for trade in list(self.portfolio.open_trades):
-            if trade.closed:
-                continue
-
-            market = markets.get(trade.market_id)
-            if not market:
-                continue
-
-            # Get current price
-            current_price = (
-                market.yes_price if trade.side == OrderSide.YES else market.no_price
-            )
-
-            # Update P&L
-            trade.update_pnl(current_price)
-
-            if not trade.pnl_percentage:
-                continue
-
-            # Check stop loss
-            if trade.pnl_percentage <= -stop_loss_pct * 100:
-                await self.close_position(trade, current_price, "stop_loss_triggered")
-                closed_count += 1
-
-            # Check take profit
-            elif trade.pnl_percentage >= take_profit_pct * 100:
-                await self.close_position(trade, current_price, "take_profit_triggered")
-                closed_count += 1
-
-        if closed_count > 0:
-            logger.info("exit_rules_applied", positions_closed=closed_count)
-
-        return closed_count
+        return self.portfolio_service.apply_exit_rules(markets)
 
     def get_portfolio_summary(self) -> dict:
         """Get portfolio summary.
 
+        Delegates to portfolio service.
+
         Returns:
             Dict with portfolio statistics
         """
-        return {
-            "balance": float(self.portfolio.balance),
-            "total_pnl": float(self.portfolio.total_pnl),
-            "roi": self.portfolio.roi,
-            "total_trades": self.portfolio.total_trades,
-            "open_positions": len(self.portfolio.open_trades),
-            "winning_trades": self.portfolio.winning_trades,
-            "losing_trades": self.portfolio.losing_trades,
-            "win_rate": self.portfolio.win_rate,
-            "available_balance": float(self.portfolio.available_balance),
-        }
+        return self.portfolio_service.get_summary()

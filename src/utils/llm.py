@@ -166,6 +166,44 @@ KEY_FACTORS: [comma-separated list of key factors]
 
 Think step-by-step and be precise in your analysis."""
 
+    def _parse_structured_response(
+        self,
+        response: str,
+        field_parsers: Dict[str, callable],
+        defaults: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Generic parser for colon-separated LLM responses.
+
+        Args:
+            response: Raw LLM response
+            field_parsers: Dict mapping field names to parser functions
+            defaults: Default values for result dict
+
+        Returns:
+            Parsed response dict
+        """
+        result = defaults.copy()
+
+        try:
+            lines = response.split("\n")
+            for line in lines:
+                for field_name, parser in field_parsers.items():
+                    prefix = f"{field_name.upper()}:"
+                    if line.startswith(prefix):
+                        value_str = line.split(":", 1)[1].strip()
+                        result[field_name.lower()] = parser(value_str)
+                        break
+
+        except (ValueError, IndexError) as e:
+            logger.error(
+                "structured_response_parse_error",
+                error=str(e),
+                response=response[:200],
+            )
+            raise ValueError(f"Failed to parse structured LLM response: {e}")
+
+        return result
+
     def _parse_prediction_response(self, response: str) -> Dict[str, Any]:
         """Parse structured prediction from LLM response.
 
@@ -178,36 +216,24 @@ Think step-by-step and be precise in your analysis."""
         Raises:
             ValueError: If parsing fails or values are invalid
         """
-        result = {
+        # Define parsers for each field
+        field_parsers = {
+            "probability": float,
+            "confidence": int,
+            "reasoning": str,
+            "key_factors": lambda x: [f.strip() for f in x.split(",") if f.strip()],
+        }
+
+        # Define defaults
+        defaults = {
             "probability": None,
             "confidence": None,
             "reasoning": response,
             "key_factors": [],
         }
 
-        try:
-            lines = response.split("\n")
-            for line in lines:
-                if line.startswith("PROBABILITY:"):
-                    prob_str = line.split(":", 1)[1].strip()
-                    result["probability"] = float(prob_str)
-                elif line.startswith("CONFIDENCE:"):
-                    conf_str = line.split(":", 1)[1].strip()
-                    result["confidence"] = int(conf_str)
-                elif line.startswith("REASONING:"):
-                    reasoning = line.split(":", 1)[1].strip()
-                    result["reasoning"] = reasoning
-                elif line.startswith("KEY_FACTORS:"):
-                    factors = line.split(":", 1)[1].strip()
-                    result["key_factors"] = [
-                        f.strip() for f in factors.split(",") if f.strip()
-                    ]
-
-        except (ValueError, IndexError) as e:
-            logger.error(
-                "prediction_parse_error", error=str(e), response=response[:200]
-            )
-            raise ValueError(f"Failed to parse LLM prediction response: {e}")
+        # Parse using generic parser
+        result = self._parse_structured_response(response, field_parsers, defaults)
 
         # Validate required fields were parsed
         if result["probability"] is None or result["confidence"] is None:
@@ -280,20 +306,26 @@ EXPLANATION: [brief explanation]""",
         Returns:
             Parsed relevance dict
         """
-        result = {"relevance": 0.0, "impact": "unclear", "explanation": response}
+        # Define parsers for each field
+        field_parsers = {
+            "relevance": float,
+            "impact": lambda x: x.lower(),
+            "explanation": str,
+        }
+
+        # Define defaults
+        defaults = {
+            "relevance": 0.0,
+            "impact": "unclear",
+            "explanation": response,
+        }
 
         try:
-            lines = response.split("\n")
-            for line in lines:
-                if line.startswith("RELEVANCE:"):
-                    score_str = line.split(":", 1)[1].strip()
-                    result["relevance"] = float(score_str)
-                elif line.startswith("IMPACT:"):
-                    result["impact"] = line.split(":", 1)[1].strip().lower()
-                elif line.startswith("EXPLANATION:"):
-                    result["explanation"] = line.split(":", 1)[1].strip()
-        except (ValueError, IndexError) as e:
+            # Parse using generic parser
+            result = self._parse_structured_response(response, field_parsers, defaults)
+        except ValueError as e:
             logger.warning("relevance_parse_error", error=str(e))
+            result = defaults
 
         return result
 
