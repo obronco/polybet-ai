@@ -133,7 +133,7 @@ def test_validate_trade_low_edge(
 
 def test_kelly_criterion_calculation(risk_manager, sample_prediction, sample_portfolio):
     """Test Kelly Criterion position sizing."""
-    kelly_size = risk_manager._calculate_kelly_size(
+    kelly_size = risk_manager.position_sizer.calculate_kelly_size(
         prediction=sample_prediction,
         portfolio=sample_portfolio,
     )

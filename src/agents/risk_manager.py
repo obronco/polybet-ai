@@ -1,10 +1,11 @@
 """Risk Management Agent - Validates trades and enforces risk limits."""
 
 from decimal import Decimal
-from typing import List
+from typing import List, Optional
 
 from ..models.market import Market
 from ..models.trade import Portfolio, Prediction, RiskAssessment, TradeDirection
+from ..strategies.position_sizing import PositionSizer
 from ..utils.config import config
 from ..utils.logger import get_logger
 
@@ -14,12 +15,20 @@ logger = get_logger(__name__)
 class RiskManagerAgent:
     """Agent responsible for risk management and trade validation."""
 
-    def __init__(self):
-        """Initialize Risk Manager Agent."""
+    def __init__(self, position_sizer: Optional[PositionSizer] = None):
+        """Initialize Risk Manager Agent.
+
+        Args:
+            position_sizer: Position sizing strategy (creates default if None)
+        """
         self.risk_config = config.get_risk_limits()
         self.position_config = config.get_position_sizing_config()
         self.circuit_breaker_config = config.get_circuit_breaker_config()
         self.circuit_breaker_active = False
+
+        # Use injected position sizer or create default
+        self.position_sizer = position_sizer or PositionSizer(self.position_config)
+
         logger.info("risk_manager_agent_initialized")
 
     async def validate_trade(
@@ -138,7 +147,7 @@ class RiskManagerAgent:
             warnings=warnings,
             recommended_size=recommended_size,
             max_size=max_size,
-            kelly_size=self._calculate_kelly_size(prediction, portfolio),
+            kelly_size=self.position_sizer.calculate_kelly_size(prediction, portfolio),
             current_exposure=self._calculate_category_exposure(
                 portfolio, market.category
             ),
@@ -163,6 +172,8 @@ class RiskManagerAgent:
     ) -> Decimal:
         """Calculate recommended position size.
 
+        Delegates to position sizing strategy.
+
         Args:
             prediction: AI prediction
             portfolio: Current portfolio
@@ -171,114 +182,7 @@ class RiskManagerAgent:
         Returns:
             Recommended position size in USD
         """
-        method = self.position_config.get("method", "kelly_criterion")
-
-        if method == "kelly_criterion":
-            kelly_size = self._calculate_kelly_size(prediction, portfolio)
-
-            # Apply Kelly fraction for conservative sizing
-            kelly_fraction = Decimal(
-                str(self.position_config.get("kelly_fraction", 0.25))
-            )
-            recommended = kelly_size * kelly_fraction
-
-        elif method == "fixed_fraction":
-            fraction = Decimal(str(self.position_config.get("max_bet_size_pct", 0.03)))
-            recommended = portfolio.balance * fraction
-
-        else:  # fixed_amount
-            recommended = Decimal(str(self.position_config.get("min_bet_size_usd", 10)))
-
-        # Apply min/max constraints
-        min_size = Decimal(str(self.position_config.get("min_bet_size_usd", 10)))
-        max_size = Decimal(str(self.position_config.get("max_bet_size_usd", 1000)))
-
-        recommended = max(min_size, min(max_size, recommended))
-
-        # Adjust based on confidence
-        confidence_multiplier = self._get_confidence_multiplier(prediction.confidence)
-        recommended = recommended * Decimal(str(confidence_multiplier))
-
-        logger.debug("position_size_calculated", size=float(recommended))
-
-        return recommended
-
-    def _calculate_kelly_size(
-        self,
-        prediction: Prediction,
-        portfolio: Portfolio,
-    ) -> Decimal:
-        """Calculate Kelly Criterion position size.
-
-        Args:
-            prediction: AI prediction
-            portfolio: Current portfolio
-
-        Returns:
-            Kelly size in USD
-        """
-        # Kelly formula: f = (bp - q) / b
-        # where:
-        # f = fraction of bankroll to bet
-        # b = odds received (profit/stake)
-        # p = probability of winning
-        # q = probability of losing (1 - p)
-
-        p = float(prediction.predicted_probability)
-        q = 1 - p
-
-        # Calculate odds (simplified for binary market)
-        if prediction.direction == TradeDirection.LONG:
-            # Buying YES at current price
-            price = float(prediction.current_market_price)
-            b = (1 - price) / price if price > 0 else 0
-        else:
-            # Buying NO
-            price = 1 - float(prediction.current_market_price)
-            b = (1 - price) / price if price > 0 else 0
-
-        # Kelly fraction
-        if b > 0:
-            kelly_fraction = (b * p - q) / b
-        else:
-            kelly_fraction = 0
-
-        # Kelly fraction should be between 0 and 1
-        kelly_fraction = max(0, min(1, kelly_fraction))
-
-        # Calculate kelly size
-        kelly_size = portfolio.balance * Decimal(str(kelly_fraction))
-
-        logger.debug(
-            "kelly_size_calculated",
-            kelly_fraction=kelly_fraction,
-            size=float(kelly_size),
-        )
-
-        return kelly_size
-
-    def _get_confidence_multiplier(self, confidence: int) -> float:
-        """Get position size multiplier based on confidence.
-
-        Args:
-            confidence: Confidence score (1-10)
-
-        Returns:
-            Multiplier (0-1)
-        """
-        confidence_multipliers = config.risk_config.get(
-            "confidence_multipliers",
-            {"very_high": 1.0, "high": 0.75, "medium": 0.5, "low": 0.25},
-        )
-
-        if confidence >= 9:
-            return confidence_multipliers.get("very_high", 1.0)
-        elif confidence >= 7:
-            return confidence_multipliers.get("high", 0.75)
-        elif confidence >= 5:
-            return confidence_multipliers.get("medium", 0.5)
-        else:
-            return confidence_multipliers.get("low", 0.25)
+        return self.position_sizer.calculate_size(prediction, portfolio)
 
     def _calculate_risk_score(
         self,
