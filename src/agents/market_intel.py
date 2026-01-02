@@ -6,6 +6,7 @@ from typing import List, Optional
 from ..api.gamma import GammaClient
 from ..models.market import Market, MarketOpportunity
 from ..rag.vector_store import VectorStore
+from ..strategies.market_filters import MarketFilterChain, create_filter_chain_from_config
 from ..utils.config import config
 from ..utils.logger import get_logger
 
@@ -19,12 +20,14 @@ class MarketIntelligenceAgent:
         self,
         gamma_client: Optional[GammaClient] = None,
         vector_store: Optional[VectorStore] = None,
+        filter_chain: Optional[MarketFilterChain] = None,
     ):
         """Initialize Market Intelligence Agent.
 
         Args:
             gamma_client: Gamma API client instance (creates default if None)
             vector_store: Vector store instance (creates default if None)
+            filter_chain: Market filter chain (creates default from config if None)
         """
         self.gamma_client = gamma_client or GammaClient()
 
@@ -35,7 +38,13 @@ class MarketIntelligenceAgent:
         else:
             self.vector_store = vector_store
 
+        # Use injected filter chain or create from config
         self.market_filters = config.get_market_filters()
+        if filter_chain is None:
+            self.filter_chain = create_filter_chain_from_config(self.market_filters)
+        else:
+            self.filter_chain = filter_chain
+
         logger.info("market_intelligence_agent_initialized")
 
     async def __aenter__(self):
@@ -169,64 +178,15 @@ class MarketIntelligenceAgent:
     def _filter_markets(self, markets: List[Market]) -> List[Market]:
         """Filter markets based on configured criteria.
 
+        Delegates to filter chain.
+
         Args:
             markets: List of markets to filter
 
         Returns:
             Filtered list of markets
         """
-        filtered = []
-
-        min_liquidity = Decimal(str(self.market_filters.get("min_liquidity_usd", 0)))
-        min_volume_24h = Decimal(str(self.market_filters.get("min_volume_24h_usd", 0)))
-        max_spread = Decimal(str(self.market_filters.get("max_spread", 1.0)))
-        min_time_hours = self.market_filters.get("min_time_to_resolution_hours", 0)
-        max_time_hours = self.market_filters.get("max_time_to_resolution_hours", 999999)
-        allowed_categories = self.market_filters.get("categories", [])
-        exclude_terms = self.market_filters.get("exclude_markets_containing", [])
-
-        for market in markets:
-            # Check if market is active
-            if not market.is_active:
-                continue
-
-            # Check liquidity
-            if market.liquidity < min_liquidity:
-                continue
-
-            # Check 24h volume
-            if market.volume_24h < min_volume_24h:
-                continue
-
-            # Check spread
-            if market.spread > max_spread:
-                continue
-
-            # Check time to resolution
-            time_to_resolution = market.time_to_resolution_hours
-            if time_to_resolution < min_time_hours:
-                continue
-            if time_to_resolution > max_time_hours:
-                continue
-
-            # Check category
-            if allowed_categories and market.category not in allowed_categories:
-                continue
-
-            # Check for excluded terms
-            question_lower = market.question.lower()
-            if any(term.lower() in question_lower for term in exclude_terms):
-                continue
-
-            filtered.append(market)
-
-        logger.debug(
-            "markets_filtered",
-            original_count=len(markets),
-            filtered_count=len(filtered),
-        )
-
-        return filtered
+        return self.filter_chain.filter_markets(markets)
 
     async def find_opportunities(
         self,
