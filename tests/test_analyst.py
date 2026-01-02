@@ -1,6 +1,6 @@
 """Tests for Analyst Agent."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -10,7 +10,17 @@ from src.agents.analyst import AnalystAgent
 @pytest.fixture
 def analyst():
     """Create analyst agent with mocked dependencies."""
-    return AnalystAgent()
+    # Create mock dependencies
+    mock_vector_store = MagicMock()
+    mock_llm_client = MagicMock()
+
+    # Create analyst with mocked dependencies
+    agent = AnalystAgent(
+        vector_store=mock_vector_store,
+        llm_client=mock_llm_client
+    )
+
+    return agent
 
 
 @pytest.fixture
@@ -69,14 +79,14 @@ async def test_analyze_news_market_correlation(
     analyst, sample_news_articles, sample_market
 ):
     """Test news-market correlation analysis."""
-    with patch("src.agents.analyst.llm_client") as mock_llm:
-        mock_llm.analyze_news_relevance = AsyncMock(
-            return_value={
-                "relevance": 0.8,
-                "impact": "positive",
-                "explanation": "Strongly related to Bitcoin price",
-            }
-        )
+    # Configure the injected mock
+    analyst.llm_client.analyze_news_relevance = AsyncMock(
+        return_value={
+            "relevance": 0.8,
+            "impact": "positive",
+            "explanation": "Strongly related to Bitcoin price",
+        }
+    )
 
         opportunities = await analyst.analyze_news_market_correlation(
             news_article=sample_news_articles[0],
