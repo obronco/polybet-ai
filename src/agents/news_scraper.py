@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from ..api.news_sources import NewsAggregator
 from ..models.news import NewsArticle, NewsQuery, NewsSource
-from ..rag.vector_store import vector_store
+from ..rag.vector_store import VectorStore
 from ..utils.config import config
 from ..utils.logger import get_logger
 
@@ -20,6 +20,8 @@ class NewsScraperAgent:
         newsapi_key: Optional[str] = None,
         tavily_key: Optional[str] = None,
         rss_feeds: Optional[List[str]] = None,
+        aggregator: Optional[NewsAggregator] = None,
+        vector_store: Optional[VectorStore] = None,
     ):
         """Initialize News Scraper Agent.
 
@@ -27,12 +29,23 @@ class NewsScraperAgent:
             newsapi_key: NewsAPI key (defaults to config)
             tavily_key: Tavily API key (defaults to config)
             rss_feeds: List of RSS feed URLs
+            aggregator: News aggregator instance (creates default if None)
+            vector_store: Vector store instance (creates default if None)
         """
-        self.aggregator = NewsAggregator(
+        # Use provided aggregator or create new one
+        self.aggregator = aggregator or NewsAggregator(
             newsapi_key=newsapi_key,
             tavily_key=tavily_key,
             rss_feeds=rss_feeds,
         )
+
+        # Import default vector store if not provided
+        if vector_store is None:
+            from ..rag.vector_store import vector_store as default_vector_store
+            self.vector_store = default_vector_store
+        else:
+            self.vector_store = vector_store
+
         self.markets_config = config.markets_config
         logger.info("news_scraper_agent_initialized")
 
@@ -72,7 +85,7 @@ class NewsScraperAgent:
 
         # Index in vector store for RAG
         if filtered_articles:
-            vector_store.add_news_articles(filtered_articles)
+            self.vector_store.add_news_articles(filtered_articles)
 
         logger.info(
             "news_scraping_complete",
@@ -119,7 +132,7 @@ class NewsScraperAgent:
 
         # Index in vector store
         if articles:
-            vector_store.add_news_articles(articles)
+            self.vector_store.add_news_articles(articles)
 
         logger.info(
             "category_news_scraped",
@@ -156,7 +169,7 @@ class NewsScraperAgent:
 
         # Index in vector store
         if articles:
-            vector_store.add_news_articles(articles)
+            self.vector_store.add_news_articles(articles)
 
         logger.info("targeted_news_scraped", count=len(articles))
         return articles

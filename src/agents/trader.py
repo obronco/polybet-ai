@@ -24,14 +24,18 @@ logger = get_logger(__name__)
 class TradingAgent:
     """Agent responsible for executing trades."""
 
-    def __init__(self, paper_trading: bool = True):
+    def __init__(
+        self,
+        paper_trading: bool = True,
+        polymarket_client: Optional[PolymarketClient] = None,
+    ):
         """Initialize Trading Agent.
 
         Args:
             paper_trading: Whether to use paper trading mode
+            polymarket_client: Polymarket client instance (creates default if needed for real trading)
         """
         self.paper_trading = paper_trading or config.settings.paper_trading_mode
-        self.polymarket_client = None
 
         if not self.paper_trading:
             # CRITICAL SAFETY CHECK: Real trading mode
@@ -48,7 +52,9 @@ class TradingAgent:
                     "Set this environment variable ONLY if you understand the risks."
                 )
 
-            self.polymarket_client = PolymarketClient()
+            self.polymarket_client = polymarket_client or PolymarketClient()
+        else:
+            self.polymarket_client = polymarket_client  # May be None for paper trading
 
         self.portfolio = Portfolio(
             balance=Decimal(

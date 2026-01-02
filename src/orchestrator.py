@@ -19,21 +19,36 @@ logger = get_logger(__name__)
 class AutonomousOrchestrator:
     """Orchestrates all agents for autonomous trading."""
 
-    def __init__(self, paper_trading: bool = True):
+    def __init__(
+        self,
+        paper_trading: bool = True,
+        news_scraper: Optional[NewsScraperAgent] = None,
+        market_intel: Optional[MarketIntelligenceAgent] = None,
+        analyst: Optional[AnalystAgent] = None,
+        forecaster: Optional[ForecastingAgent] = None,
+        risk_manager: Optional[RiskManagerAgent] = None,
+        trader: Optional[TradingAgent] = None,
+    ):
         """Initialize orchestrator with all agents.
 
         Args:
             paper_trading: Whether to use paper trading mode
+            news_scraper: News scraper agent (creates default if None)
+            market_intel: Market intelligence agent (creates default if None)
+            analyst: Analyst agent (creates default if None)
+            forecaster: Forecasting agent (creates default if None)
+            risk_manager: Risk manager agent (creates default if None)
+            trader: Trading agent (creates default if None)
         """
         logger.info("initializing_orchestrator", paper_trading=paper_trading)
 
-        # Initialize all agents
-        self.news_scraper = NewsScraperAgent()
-        self.market_intel = MarketIntelligenceAgent()
-        self.analyst = AnalystAgent()
-        self.forecaster = ForecastingAgent()
-        self.risk_manager = RiskManagerAgent()
-        self.trader = TradingAgent(paper_trading=paper_trading)
+        # Initialize all agents (use provided or create defaults)
+        self.news_scraper = news_scraper or NewsScraperAgent()
+        self.market_intel = market_intel or MarketIntelligenceAgent()
+        self.analyst = analyst or AnalystAgent()
+        self.forecaster = forecaster or ForecastingAgent()
+        self.risk_manager = risk_manager or RiskManagerAgent()
+        self.trader = trader or TradingAgent(paper_trading=paper_trading)
 
         self.running = False
         self.cycle_count = 0

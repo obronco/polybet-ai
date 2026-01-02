@@ -6,7 +6,7 @@ from typing import List, Optional
 from ..models.market import Market
 from ..models.news import NewsArticle
 from ..models.trade import Prediction, TradeDirection
-from ..utils.llm import llm_client
+from ..utils.llm import LLMClient
 from ..utils.logger import get_logger
 from ..utils.prompts import build_news_context
 
@@ -16,15 +16,22 @@ logger = get_logger(__name__)
 class ForecastingAgent:
     """Agent responsible for forecasting market outcomes using AI."""
 
-    def __init__(self, model: Optional[str] = None, temperature: float = 0.7):
+    def __init__(
+        self,
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        llm_client: Optional[LLMClient] = None,
+    ):
         """Initialize Forecasting Agent.
 
         Args:
             model: LLM model name (defaults to config)
             temperature: Sampling temperature for predictions
+            llm_client: LLM client instance (creates default if None)
         """
         self.model = model
         self.temperature = temperature
+        self.llm_client = llm_client or LLMClient(model=model, temperature=temperature)
         logger.info(
             "forecasting_agent_initialized",
             model=model or "default",
@@ -65,7 +72,7 @@ class ForecastingAgent:
             news_text = "No recent relevant news available."
 
         # Get prediction from LLM
-        prediction_data = await llm_client.predict_market_outcome(
+        prediction_data = await self.llm_client.predict_market_outcome(
             question=market.question,
             current_odds=float(market.yes_price),
             news_context=news_text,

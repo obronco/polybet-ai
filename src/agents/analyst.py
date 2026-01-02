@@ -1,11 +1,11 @@
 """Analyst Agent - Correlates news events with relevant markets."""
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from ..models.market import Market, MarketOpportunity
 from ..models.news import NewsArticle
-from ..rag.vector_store import vector_store
-from ..utils.llm import llm_client
+from ..rag.vector_store import VectorStore
+from ..utils.llm import LLMClient
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -14,8 +14,30 @@ logger = get_logger(__name__)
 class AnalystAgent:
     """Agent responsible for analyzing news-market correlations."""
 
-    def __init__(self):
-        """Initialize Analyst Agent."""
+    def __init__(
+        self,
+        vector_store: Optional[VectorStore] = None,
+        llm_client: Optional[LLMClient] = None,
+    ):
+        """Initialize Analyst Agent.
+
+        Args:
+            vector_store: Vector store instance (creates default if None)
+            llm_client: LLM client instance (creates default if None)
+        """
+        # Import defaults here to avoid circular imports
+        if vector_store is None:
+            from ..rag.vector_store import vector_store as default_vector_store
+            self.vector_store = default_vector_store
+        else:
+            self.vector_store = vector_store
+
+        if llm_client is None:
+            from ..utils.llm import llm_client as default_llm_client
+            self.llm_client = default_llm_client
+        else:
+            self.llm_client = llm_client
+
         logger.info("analyst_agent_initialized")
 
     async def analyze_news_market_correlation(
@@ -44,7 +66,7 @@ class AnalystAgent:
 
         for market in markets:
             # Use LLM to analyze relevance
-            relevance_data = await llm_client.analyze_news_relevance(
+            relevance_data = await self.llm_client.analyze_news_relevance(
                 news_summary=f"{news_article.title}\n\n{news_article.description or ''}",
                 market_question=market.question,
             )
@@ -98,7 +120,7 @@ class AnalystAgent:
 
         for article in news_articles:
             # Use hybrid search (BM25 + vector embeddings) to find related markets
-            related_markets = vector_store.hybrid_find_markets_for_news(
+            related_markets = self.vector_store.hybrid_find_markets_for_news(
                 article,
                 top_k=10,
                 bm25_weight=0.4,  # Higher weight for keyword matching in news
@@ -161,7 +183,7 @@ class AnalystAgent:
 
         for market in markets:
             # Use hybrid search (BM25 + vector) to find relevant news
-            relevant_news_data = vector_store.hybrid_find_news_for_market(
+            relevant_news_data = self.vector_store.hybrid_find_news_for_market(
                 market,
                 top_k=10,
                 bm25_weight=0.3,  # Standard weights for market->news search
@@ -252,7 +274,7 @@ class AnalystAgent:
         )
 
         # Use LLM for detailed impact analysis
-        result = await llm_client.analyze_news_relevance(
+        result = await self.llm_client.analyze_news_relevance(
             news_summary=(
                 f"Title: {news_article.title}\n"
                 f"Source: {news_article.source_name}\n"

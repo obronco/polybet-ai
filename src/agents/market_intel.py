@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from ..api.gamma import GammaClient
 from ..models.market import Market, MarketOpportunity
-from ..rag.vector_store import vector_store
+from ..rag.vector_store import VectorStore
 from ..utils.config import config
 from ..utils.logger import get_logger
 
@@ -15,9 +15,26 @@ logger = get_logger(__name__)
 class MarketIntelligenceAgent:
     """Agent responsible for retrieving and analyzing market data."""
 
-    def __init__(self):
-        """Initialize Market Intelligence Agent."""
-        self.gamma_client = GammaClient()
+    def __init__(
+        self,
+        gamma_client: Optional[GammaClient] = None,
+        vector_store: Optional[VectorStore] = None,
+    ):
+        """Initialize Market Intelligence Agent.
+
+        Args:
+            gamma_client: Gamma API client instance (creates default if None)
+            vector_store: Vector store instance (creates default if None)
+        """
+        self.gamma_client = gamma_client or GammaClient()
+
+        # Import default vector store if not provided
+        if vector_store is None:
+            from ..rag.vector_store import vector_store as default_vector_store
+            self.vector_store = default_vector_store
+        else:
+            self.vector_store = vector_store
+
         self.market_filters = config.get_market_filters()
         logger.info("market_intelligence_agent_initialized")
 
@@ -62,7 +79,7 @@ class MarketIntelligenceAgent:
 
         # Index markets in vector store for RAG
         if markets:
-            vector_store.add_markets(markets)
+            self.vector_store.add_markets(markets)
 
         logger.info(
             "active_markets_fetched",
@@ -308,7 +325,7 @@ class MarketIntelligenceAgent:
 
         markets = await self.get_active_markets(limit=500, apply_filters=False)
 
-        count = vector_store.add_markets(markets)
+        count = self.vector_store.add_markets(markets)
 
         logger.info("market_index_refreshed", count=count)
 
