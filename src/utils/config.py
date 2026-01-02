@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import yaml
-from pydantic import Field, SecretStr
+from pydantic import ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -12,12 +12,20 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # Polymarket Configuration
-    polygon_wallet_private_key: SecretStr = Field(..., alias="POLYGON_WALLET_PRIVATE_KEY")
+    polygon_wallet_private_key: SecretStr = Field(
+        ..., alias="POLYGON_WALLET_PRIVATE_KEY"
+    )
     polygon_wallet_address: str = Field(..., alias="POLYGON_WALLET_ADDRESS")
 
-    polymarket_api_key: SecretStr = Field(default=SecretStr(""), alias="POLYMARKET_API_KEY")
-    polymarket_api_secret: SecretStr = Field(default=SecretStr(""), alias="POLYMARKET_API_SECRET")
-    polymarket_passphrase: SecretStr = Field(default=SecretStr(""), alias="POLYMARKET_PASSPHRASE")
+    polymarket_api_key: SecretStr = Field(
+        default=SecretStr(""), alias="POLYMARKET_API_KEY"
+    )
+    polymarket_api_secret: SecretStr = Field(
+        default=SecretStr(""), alias="POLYMARKET_API_SECRET"
+    )
+    polymarket_passphrase: SecretStr = Field(
+        default=SecretStr(""), alias="POLYMARKET_PASSPHRASE"
+    )
 
     # AI/LLM Configuration
     openai_api_key: SecretStr = Field(..., alias="OPENAI_API_KEY")
@@ -30,8 +38,12 @@ class Settings(BaseSettings):
 
     # Optional: Twitter/X API
     twitter_api_key: SecretStr = Field(default=SecretStr(""), alias="TWITTER_API_KEY")
-    twitter_api_secret: SecretStr = Field(default=SecretStr(""), alias="TWITTER_API_SECRET")
-    twitter_bearer_token: SecretStr = Field(default=SecretStr(""), alias="TWITTER_BEARER_TOKEN")
+    twitter_api_secret: SecretStr = Field(
+        default=SecretStr(""), alias="TWITTER_API_SECRET"
+    )
+    twitter_bearer_token: SecretStr = Field(
+        default=SecretStr(""), alias="TWITTER_BEARER_TOKEN"
+    )
 
     # Database Configuration
     chroma_persist_directory: str = Field(
@@ -57,7 +69,9 @@ class Settings(BaseSettings):
     # Monitoring & Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     sentry_dsn: SecretStr = Field(default=SecretStr(""), alias="SENTRY_DSN")
-    telegram_bot_token: SecretStr = Field(default=SecretStr(""), alias="TELEGRAM_BOT_TOKEN")
+    telegram_bot_token: SecretStr = Field(
+        default=SecretStr(""), alias="TELEGRAM_BOT_TOKEN"
+    )
     telegram_chat_id: str = Field(default="", alias="TELEGRAM_CHAT_ID")
 
     # System Configuration
@@ -69,11 +83,12 @@ class Settings(BaseSettings):
         default=60, alias="API_RATE_LIMIT_CALLS_PER_MINUTE"
     )
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        populate_by_name = True
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        populate_by_name=True,
+    )
 
     def __repr__(self) -> str:
         """Custom repr that never exposes secrets."""

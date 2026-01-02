@@ -37,7 +37,7 @@ class TradingAgent:
             # CRITICAL SAFETY CHECK: Real trading mode
             logger.critical(
                 "🚨 REAL TRADING MODE ENABLED - ACTUAL FUNDS AT RISK 🚨",
-                wallet_address=config.settings.polygon_wallet_address
+                wallet_address=config.settings.polygon_wallet_address,
             )
 
             # Require explicit confirmation via environment variable
@@ -52,10 +52,18 @@ class TradingAgent:
 
         self.portfolio = Portfolio(
             balance=Decimal(
-                str(config.risk_config.get("paper_trading", {}).get("initial_balance", 10000))
+                str(
+                    config.risk_config.get("paper_trading", {}).get(
+                        "initial_balance", 10000
+                    )
+                )
             ),
             initial_balance=Decimal(
-                str(config.risk_config.get("paper_trading", {}).get("initial_balance", 10000))
+                str(
+                    config.risk_config.get("paper_trading", {}).get(
+                        "initial_balance", 10000
+                    )
+                )
             ),
         )
 
@@ -101,7 +109,9 @@ class TradingAgent:
             market=market,
             prediction=prediction,
             risk_assessment=risk_assessment,
-            side=OrderSide.YES if prediction.direction == TradeDirection.LONG else OrderSide.NO,
+            side=OrderSide.YES
+            if prediction.direction == TradeDirection.LONG
+            else OrderSide.NO,
             direction=prediction.direction,
             size=risk_assessment.recommended_size,
         )
@@ -181,7 +191,9 @@ class TradingAgent:
 
         return trade
 
-    async def _execute_real_trade(self, proposed_trade: ProposedTrade) -> Optional[Trade]:
+    async def _execute_real_trade(
+        self, proposed_trade: ProposedTrade
+    ) -> Optional[Trade]:
         """Execute a real trade on Polymarket.
 
         Args:
@@ -359,9 +371,7 @@ class TradingAgent:
 
             # Get current price
             current_price = (
-                market.yes_price
-                if trade.side == OrderSide.YES
-                else market.no_price
+                market.yes_price if trade.side == OrderSide.YES else market.no_price
             )
 
             # Update P&L
@@ -372,16 +382,12 @@ class TradingAgent:
 
             # Check stop loss
             if trade.pnl_percentage <= -stop_loss_pct * 100:
-                await self.close_position(
-                    trade, current_price, "stop_loss_triggered"
-                )
+                await self.close_position(trade, current_price, "stop_loss_triggered")
                 closed_count += 1
 
             # Check take profit
             elif trade.pnl_percentage >= take_profit_pct * 100:
-                await self.close_position(
-                    trade, current_price, "take_profit_triggered"
-                )
+                await self.close_position(trade, current_price, "take_profit_triggered")
                 closed_count += 1
 
         if closed_count > 0:

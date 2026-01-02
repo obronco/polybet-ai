@@ -52,7 +52,9 @@ class GammaClient:
             async with self.session.get(url, params=params) as response:
                 response.raise_for_status()
                 data = await response.json()
-                logger.debug("gamma_api_request", endpoint=endpoint, status=response.status)
+                logger.debug(
+                    "gamma_api_request", endpoint=endpoint, status=response.status
+                )
                 return data
 
         except aiohttp.ClientError as e:
@@ -92,7 +94,9 @@ class GammaClient:
                 market = self._parse_market(item)
                 markets.append(market)
             except Exception as e:
-                logger.warning("market_parse_error", market_id=item.get("id"), error=str(e))
+                logger.warning(
+                    "market_parse_error", market_id=item.get("id"), error=str(e)
+                )
 
         logger.info("markets_fetched", count=len(markets))
         return markets
@@ -153,9 +157,7 @@ class GammaClient:
             logger.error("get_event_error", event_id=event_id, error=str(e))
             return None
 
-    async def search_markets(
-        self, query: str, limit: int = 50
-    ) -> List[Market]:
+    async def search_markets(self, query: str, limit: int = 50) -> List[Market]:
         """Search markets by query string.
 
         Args:

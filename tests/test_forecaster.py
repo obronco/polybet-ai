@@ -12,12 +12,18 @@ def forecaster():
     """Create forecaster with mocked LLM."""
     with patch("src.agents.forecaster.llm_client") as mock_llm:
         # Mock the predict_market_outcome method
-        mock_llm.predict_market_outcome = AsyncMock(return_value={
-            "probability": 0.65,
-            "confidence": 7,
-            "reasoning": "Strong technical indicators suggest upward momentum",
-            "key_factors": ["institutional_adoption", "technical_analysis", "market_sentiment"]
-        })
+        mock_llm.predict_market_outcome = AsyncMock(
+            return_value={
+                "probability": 0.65,
+                "confidence": 7,
+                "reasoning": "Strong technical indicators suggest upward momentum",
+                "key_factors": [
+                    "institutional_adoption",
+                    "technical_analysis",
+                    "market_sentiment",
+                ],
+            }
+        )
         agent = ForecastingAgent(model="gpt-4-turbo", temperature=0.7)
         yield agent
 
@@ -99,7 +105,9 @@ def test_get_confidence_label(forecaster):
 
 
 @pytest.mark.asyncio
-async def test_update_prediction(forecaster, sample_prediction, sample_market, sample_news_articles):
+async def test_update_prediction(
+    forecaster, sample_prediction, sample_market, sample_news_articles
+):
     """Test updating prediction with new information."""
     updated = await forecaster.update_prediction(
         original_prediction=sample_prediction,

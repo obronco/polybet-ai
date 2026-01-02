@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.models.market import Market, MarketStatus, OrderSide
-from src.models.news import NewsArticle, NewsSource, SentimentScore
+from src.models.news import NewsSource, SentimentScore
 from src.models.trade import (
     Order,
     Prediction,
@@ -56,7 +56,7 @@ def test_news_article_model_valid(sample_news_articles):
 
     assert article.id == "news_btc_surge"
     assert article.source == NewsSource.NEWSAPI
-    assert article.is_recent(hours=24*365)  # Should be recent for test
+    assert article.is_recent(hours=24 * 365)  # Should be recent for test
 
 
 def test_news_article_age_calculation(sample_news_articles):

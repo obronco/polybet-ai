@@ -58,7 +58,9 @@ class BM25:
             self.doc_freqs.append(Counter(tokens))
 
         # Calculate average document length
-        self.avg_doc_length = sum(self.doc_lengths) / len(self.doc_lengths) if self.doc_lengths else 0
+        self.avg_doc_length = (
+            sum(self.doc_lengths) / len(self.doc_lengths) if self.doc_lengths else 0
+        )
 
         # Calculate IDF for each term
         num_docs = len(self.documents)

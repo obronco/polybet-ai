@@ -1,6 +1,6 @@
 """Tests for Analyst Agent."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -17,6 +17,7 @@ def analyst():
 def mock_vector_store_results():
     """Mock vector store search results."""
     from datetime import datetime
+
     return [
         {
             "id": "market_btc_100k",
@@ -64,7 +65,9 @@ def mock_vector_store_results():
 
 
 @pytest.mark.asyncio
-async def test_analyze_news_market_correlation(analyst, sample_news_articles, sample_market):
+async def test_analyze_news_market_correlation(
+    analyst, sample_news_articles, sample_market
+):
     """Test news-market correlation analysis."""
     with patch("src.agents.analyst.llm_client") as mock_llm:
         mock_llm.analyze_news_relevance = AsyncMock(
@@ -87,7 +90,9 @@ async def test_analyze_news_market_correlation(analyst, sample_news_articles, sa
 
 
 @pytest.mark.asyncio
-async def test_find_opportunities_from_news(analyst, sample_news_articles, mock_vector_store_results):
+async def test_find_opportunities_from_news(
+    analyst, sample_news_articles, mock_vector_store_results
+):
     """Test finding opportunities from news articles."""
     with patch("src.agents.analyst.vector_store") as mock_vs:
         mock_vs.hybrid_find_markets_for_news.return_value = mock_vector_store_results

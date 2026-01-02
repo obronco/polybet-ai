@@ -163,7 +163,10 @@ class AutonomousOrchestrator:
                             )
                         else:
                             trades_rejected.append(
-                                {"market_id": opportunity.market.id, "reason": "execution_failed"}
+                                {
+                                    "market_id": opportunity.market.id,
+                                    "reason": "execution_failed",
+                                }
                             )
                     else:
                         trades_rejected.append(

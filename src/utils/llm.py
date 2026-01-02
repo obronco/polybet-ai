@@ -204,7 +204,9 @@ Think step-by-step and be precise in your analysis."""
                     ]
 
         except (ValueError, IndexError) as e:
-            logger.error("prediction_parse_error", error=str(e), response=response[:200])
+            logger.error(
+                "prediction_parse_error", error=str(e), response=response[:200]
+            )
             raise ValueError(f"Failed to parse LLM prediction response: {e}")
 
         # Validate required fields were parsed
@@ -213,18 +215,24 @@ Think step-by-step and be precise in your analysis."""
                 "prediction_missing_fields",
                 has_probability=result["probability"] is not None,
                 has_confidence=result["confidence"] is not None,
-                response=response[:200]
+                response=response[:200],
             )
-            raise ValueError("LLM response missing required PROBABILITY or CONFIDENCE fields")
+            raise ValueError(
+                "LLM response missing required PROBABILITY or CONFIDENCE fields"
+            )
 
         # Validate ranges
         if not (0 <= result["probability"] <= 1):
             logger.error("invalid_probability", value=result["probability"])
-            raise ValueError(f"Invalid probability: {result['probability']} (must be 0-1)")
+            raise ValueError(
+                f"Invalid probability: {result['probability']} (must be 0-1)"
+            )
 
         if not (1 <= result["confidence"] <= 10):
             logger.error("invalid_confidence", value=result["confidence"])
-            raise ValueError(f"Invalid confidence: {result['confidence']} (must be 1-10)")
+            raise ValueError(
+                f"Invalid confidence: {result['confidence']} (must be 1-10)"
+            )
 
         return result
 

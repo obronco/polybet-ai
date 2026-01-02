@@ -28,11 +28,15 @@ def cli(ctx, log_level, paper_trading):
     setup_logging(log_level=log_level)
     ctx.ensure_object(dict)
     ctx.obj["paper_trading"] = paper_trading
-    console.print(f"[bold blue]Polybet AI[/bold blue] - {'Paper Trading' if paper_trading else 'Live Trading'} Mode")
+    console.print(
+        f"[bold blue]Polybet AI[/bold blue] - {'Paper Trading' if paper_trading else 'Live Trading'} Mode"
+    )
 
 
 @cli.command()
-@click.option("--interval", default=None, type=int, help="Trading cycle interval (minutes)")
+@click.option(
+    "--interval", default=None, type=int, help="Trading cycle interval (minutes)"
+)
 @click.pass_context
 def run(ctx, interval):
     """Run autonomous trading agent continuously."""
@@ -68,14 +72,16 @@ def cycle(ctx):
 @click.option("--limit", default=20, help="Number of markets to show")
 def markets(category, limit):
     """List active prediction markets."""
-    console.print(f"\n[bold green]Fetching Markets[/bold green]\n")
+    console.print("\n[bold green]Fetching Markets[/bold green]\n")
 
     from src.agents.market_intel import MarketIntelligenceAgent
 
     async def fetch_markets():
         async with MarketIntelligenceAgent() as intel:
             if category:
-                markets_list = await intel.get_markets_by_category(category, limit=limit)
+                markets_list = await intel.get_markets_by_category(
+                    category, limit=limit
+                )
             else:
                 markets_list = await intel.get_active_markets(limit=limit)
 
@@ -89,7 +95,7 @@ def markets(category, limit):
 @click.option("--hours", default=24, help="Hours to look back")
 def news(keywords, hours):
     """Search for news articles."""
-    console.print(f"\n[bold green]Searching News[/bold green]\n")
+    console.print("\n[bold green]Searching News[/bold green]\n")
 
     from src.agents.news_scraper import NewsScraperAgent
 
@@ -97,7 +103,9 @@ def news(keywords, hours):
 
     async def fetch_news():
         scraper = NewsScraperAgent()
-        articles = await scraper.scrape_targeted_news(keyword_list, lookback_hours=hours)
+        articles = await scraper.scrape_targeted_news(
+            keyword_list, lookback_hours=hours
+        )
         display_news(articles)
 
     asyncio.run(fetch_news())
@@ -120,7 +128,9 @@ def trade(ctx, market_id, force):
             console.print("[bold green]✓ Trade Executed Successfully[/bold green]")
             console.print(f"Trade ID: {result.get('trade_id')}")
         else:
-            console.print(f"[bold red]✗ Trade Rejected: {result.get('reason')}[/bold red]")
+            console.print(
+                f"[bold red]✗ Trade Rejected: {result.get('reason')}[/bold red]"
+            )
 
         if "prediction" in result:
             pred = result["prediction"]
@@ -149,10 +159,12 @@ def status(ctx):
         console.print(f"Running: {status_data['running']}")
         console.print(f"Cycles Completed: {status_data['cycle_count']}")
         console.print(f"Paper Trading: {status_data['paper_trading']}")
-        console.print(f"Circuit Breaker: {'🔴 ACTIVE' if status_data['circuit_breaker_active'] else '🟢 Inactive'}")
+        console.print(
+            f"Circuit Breaker: {'🔴 ACTIVE' if status_data['circuit_breaker_active'] else '🟢 Inactive'}"
+        )
 
         console.print("\n[bold blue]Portfolio Summary[/bold blue]")
-        display_portfolio(status_data['portfolio'])
+        display_portfolio(status_data["portfolio"])
 
     asyncio.run(show_status())
 
@@ -166,7 +178,9 @@ def config_check():
         "OpenAI API Key": bool(config.settings.openai_api_key.get_secret_value()),
         "NewsAPI Key": bool(config.settings.newsapi_key.get_secret_value()),
         "Tavily API Key": bool(config.settings.tavily_api_key.get_secret_value()),
-        "Wallet Private Key": bool(config.settings.polygon_wallet_private_key.get_secret_value()),
+        "Wallet Private Key": bool(
+            config.settings.polygon_wallet_private_key.get_secret_value()
+        ),
         "Paper Trading Mode": config.settings.paper_trading_mode,
     }
 
@@ -194,7 +208,9 @@ def display_markets(markets):
 
     for market in markets[:20]:  # Show first 20
         table.add_row(
-            market.question[:47] + "..." if len(market.question) > 50 else market.question,
+            market.question[:47] + "..."
+            if len(market.question) > 50
+            else market.question,
             market.category,
             f"{market.yes_price:.2%}",
             f"${market.liquidity:,.0f}",
@@ -234,8 +250,8 @@ def display_portfolio(portfolio):
     table.add_row("Balance", f"${portfolio['balance']:,.2f}")
     table.add_row("Total P&L", f"${portfolio['total_pnl']:,.2f}")
     table.add_row("ROI", f"{portfolio['roi']:.2f}%")
-    table.add_row("Total Trades", str(portfolio['total_trades']))
-    table.add_row("Open Positions", str(portfolio['open_positions']))
+    table.add_row("Total Trades", str(portfolio["total_trades"]))
+    table.add_row("Open Positions", str(portfolio["open_positions"]))
     table.add_row("Win Rate", f"{portfolio['win_rate']:.1f}%")
     table.add_row("Available Balance", f"${portfolio['available_balance']:,.2f}")
 
@@ -248,12 +264,12 @@ def display_cycle_results(results):
     table.add_column("Metric", style="cyan")
     table.add_column("Value", justify="right", style="green")
 
-    table.add_row("News Articles Found", str(results['news_articles_found']))
-    table.add_row("Markets Analyzed", str(results['markets_analyzed']))
-    table.add_row("Opportunities Identified", str(results['opportunities_identified']))
-    table.add_row("Predictions Made", str(results['predictions_made']))
-    table.add_row("Trades Executed", str(results['trades_executed']))
-    table.add_row("Trades Rejected", str(results['trades_rejected']))
+    table.add_row("News Articles Found", str(results["news_articles_found"]))
+    table.add_row("Markets Analyzed", str(results["markets_analyzed"]))
+    table.add_row("Opportunities Identified", str(results["opportunities_identified"]))
+    table.add_row("Predictions Made", str(results["predictions_made"]))
+    table.add_row("Trades Executed", str(results["trades_executed"]))
+    table.add_row("Trades Rejected", str(results["trades_rejected"]))
     table.add_row("Duration", f"{results['duration_seconds']:.1f}s")
 
     console.print(table)

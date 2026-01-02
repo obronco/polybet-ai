@@ -1,12 +1,11 @@
 """Tests for Trading Agent."""
 
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.agents.trader import TradingAgent
-from src.models.trade import RiskAssessment, TradeDirection
+from src.models.trade import RiskAssessment
 
 
 @pytest.fixture
@@ -31,7 +30,9 @@ def approved_risk_assessment():
 
 
 @pytest.mark.asyncio
-async def test_execute_paper_trade(trader, sample_prediction, approved_risk_assessment, sample_market):
+async def test_execute_paper_trade(
+    trader, sample_prediction, approved_risk_assessment, sample_market
+):
     """Test executing paper trade."""
     trade = await trader.execute_trade(
         prediction=sample_prediction,
@@ -69,10 +70,12 @@ async def test_execute_trade_rejected(trader, sample_prediction, sample_market):
 
 
 @pytest.mark.asyncio
-async def test_update_open_positions(trader, sample_prediction, approved_risk_assessment, sample_market):
+async def test_update_open_positions(
+    trader, sample_prediction, approved_risk_assessment, sample_market
+):
     """Test updating P&L for open positions."""
     # Execute a trade first
-    trade = await trader.execute_trade(
+    _ = await trader.execute_trade(
         prediction=sample_prediction,
         risk_assessment=approved_risk_assessment,
         market=sample_market,
@@ -92,7 +95,9 @@ async def test_update_open_positions(trader, sample_prediction, approved_risk_as
 
 
 @pytest.mark.asyncio
-async def test_close_position(trader, sample_prediction, approved_risk_assessment, sample_market):
+async def test_close_position(
+    trader, sample_prediction, approved_risk_assessment, sample_market
+):
     """Test closing a position."""
     # Execute trade
     trade = await trader.execute_trade(
@@ -116,7 +121,9 @@ async def test_close_position(trader, sample_prediction, approved_risk_assessmen
 
 
 @pytest.mark.asyncio
-async def test_apply_exit_rules_stop_loss(trader, sample_prediction, approved_risk_assessment, sample_market):
+async def test_apply_exit_rules_stop_loss(
+    trader, sample_prediction, approved_risk_assessment, sample_market
+):
     """Test stop loss exit rule."""
     # Execute trade
     await trader.execute_trade(
@@ -138,7 +145,9 @@ async def test_apply_exit_rules_stop_loss(trader, sample_prediction, approved_ri
 
 
 @pytest.mark.asyncio
-async def test_apply_exit_rules_take_profit(trader, sample_prediction, approved_risk_assessment, sample_market):
+async def test_apply_exit_rules_take_profit(
+    trader, sample_prediction, approved_risk_assessment, sample_market
+):
     """Test take profit exit rule."""
     # Execute trade
     await trader.execute_trade(
@@ -170,7 +179,9 @@ def test_get_portfolio_summary(trader):
 
 
 @pytest.mark.asyncio
-async def test_portfolio_balance_update(trader, sample_prediction, approved_risk_assessment, sample_market):
+async def test_portfolio_balance_update(
+    trader, sample_prediction, approved_risk_assessment, sample_market
+):
     """Test portfolio balance updates after trade."""
     initial_balance = trader.portfolio.balance
 
@@ -190,7 +201,9 @@ async def test_portfolio_balance_update(trader, sample_prediction, approved_risk
 
 
 @pytest.mark.asyncio
-async def test_multiple_positions(trader, sample_prediction, approved_risk_assessment, sample_market):
+async def test_multiple_positions(
+    trader, sample_prediction, approved_risk_assessment, sample_market
+):
     """Test managing multiple open positions."""
     # Execute multiple trades
     for i in range(3):

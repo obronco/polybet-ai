@@ -47,9 +47,7 @@ class RiskManagerAgent:
         # 1. Circuit breaker check
         if self.circuit_breaker_active:
             checks_failed.append("Circuit breaker is active")
-            return self._create_rejection(
-                checks_failed, "Circuit breaker triggered"
-            )
+            return self._create_rejection(checks_failed, "Circuit breaker triggered")
 
         # 2. Edge requirement
         min_edge = self.risk_config.get("min_edge", 0.05)
@@ -76,27 +74,19 @@ class RiskManagerAgent:
         if market.liquidity >= min_liquidity:
             checks_passed.append(f"Liquidity (${market.liquidity:,.0f}) sufficient")
         else:
-            checks_failed.append(
-                f"Liquidity (${market.liquidity:,.0f}) below minimum"
-            )
+            checks_failed.append(f"Liquidity (${market.liquidity:,.0f}) below minimum")
 
         # 5. Portfolio limits
         max_positions = self.risk_config.get("max_concurrent_positions", 10)
         current_positions = len(portfolio.open_trades)
         if current_positions < max_positions:
-            checks_passed.append(
-                f"Open positions ({current_positions}) below limit"
-            )
+            checks_passed.append(f"Open positions ({current_positions}) below limit")
         else:
-            checks_failed.append(
-                f"Maximum positions ({max_positions}) reached"
-            )
+            checks_failed.append(f"Maximum positions ({max_positions}) reached")
 
         # 6. Daily loss limit
         max_daily_loss_pct = self.risk_config.get("max_daily_loss_pct", 0.10)
-        max_daily_loss = portfolio.initial_balance * Decimal(
-            str(max_daily_loss_pct)
-        )
+        max_daily_loss = portfolio.initial_balance * Decimal(str(max_daily_loss_pct))
         if abs(portfolio.daily_pnl) < max_daily_loss:
             checks_passed.append("Daily loss limit not exceeded")
         else:
@@ -117,11 +107,11 @@ class RiskManagerAgent:
 
         # 7. Position size validation
         if recommended_size <= max_size:
-            checks_passed.append(f"Position size ${recommended_size:,.2f} within limits")
-        else:
-            warnings.append(
-                f"Recommended size capped at ${max_size:,.2f}"
+            checks_passed.append(
+                f"Position size ${recommended_size:,.2f} within limits"
             )
+        else:
+            warnings.append(f"Recommended size capped at ${max_size:,.2f}")
             recommended_size = max_size
 
         # 8. Available balance check
@@ -193,15 +183,11 @@ class RiskManagerAgent:
             recommended = kelly_size * kelly_fraction
 
         elif method == "fixed_fraction":
-            fraction = Decimal(
-                str(self.position_config.get("max_bet_size_pct", 0.03))
-            )
+            fraction = Decimal(str(self.position_config.get("max_bet_size_pct", 0.03)))
             recommended = portfolio.balance * fraction
 
         else:  # fixed_amount
-            recommended = Decimal(
-                str(self.position_config.get("min_bet_size_usd", 10))
-            )
+            recommended = Decimal(str(self.position_config.get("min_bet_size_usd", 10)))
 
         # Apply min/max constraints
         min_size = Decimal(str(self.position_config.get("min_bet_size_usd", 10)))
@@ -210,9 +196,7 @@ class RiskManagerAgent:
         recommended = max(min_size, min(max_size, recommended))
 
         # Adjust based on confidence
-        confidence_multiplier = self._get_confidence_multiplier(
-            prediction.confidence
-        )
+        confidence_multiplier = self._get_confidence_multiplier(prediction.confidence)
         recommended = recommended * Decimal(str(confidence_multiplier))
 
         logger.debug("position_size_calculated", size=float(recommended))
@@ -265,7 +249,11 @@ class RiskManagerAgent:
         # Calculate kelly size
         kelly_size = portfolio.balance * Decimal(str(kelly_fraction))
 
-        logger.debug("kelly_size_calculated", kelly_fraction=kelly_fraction, size=float(kelly_size))
+        logger.debug(
+            "kelly_size_calculated",
+            kelly_fraction=kelly_fraction,
+            size=float(kelly_size),
+        )
 
         return kelly_size
 
@@ -334,7 +322,9 @@ class RiskManagerAgent:
         risk_factors.append(liquidity_risk * 0.2)
 
         # Position size risk
-        size_pct = float(position_size / portfolio.balance) if portfolio.balance > 0 else 1
+        size_pct = (
+            float(position_size / portfolio.balance) if portfolio.balance > 0 else 1
+        )
         size_risk = min(1, size_pct / 0.05)  # 5% = full risk
         risk_factors.append(size_risk * 0.2)
 

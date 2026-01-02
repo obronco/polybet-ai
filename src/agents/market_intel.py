@@ -161,14 +161,10 @@ class MarketIntelligenceAgent:
         filtered = []
 
         min_liquidity = Decimal(str(self.market_filters.get("min_liquidity_usd", 0)))
-        min_volume_24h = Decimal(
-            str(self.market_filters.get("min_volume_24h_usd", 0))
-        )
+        min_volume_24h = Decimal(str(self.market_filters.get("min_volume_24h_usd", 0)))
         max_spread = Decimal(str(self.market_filters.get("max_spread", 1.0)))
         min_time_hours = self.market_filters.get("min_time_to_resolution_hours", 0)
-        max_time_hours = self.market_filters.get(
-            "max_time_to_resolution_hours", 999999
-        )
+        max_time_hours = self.market_filters.get("max_time_to_resolution_hours", 999999)
         allowed_categories = self.market_filters.get("categories", [])
         exclude_terms = self.market_filters.get("exclude_markets_containing", [])
 
